@@ -1,0 +1,8 @@
+#!/bin/sh
+cd "$(dirname "$0")"
+
+docker run --rm -it \
+    --name="transcode_server_dev" \
+    -v "${PWD}/../:/app" \
+    --entrypoint="/bin/bash" \
+    transcode_server_img -c '/app/build; ./bin/transcode serve --bind :8080';
