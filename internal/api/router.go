@@ -64,7 +64,6 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 	})
 
 	r.Get("/cpu/{input}/{profile}", func (w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "video/mp2t")
 		logger := log.With().
 			Str("path", r.URL.Path).
 			Str("module", "ffmpeg").
@@ -86,7 +85,8 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 			return
 		}
 
-		logger.Info().Msg("command startred")
+		logger.Info().Msg("command started")
+		w.Header().Set("Content-Type", "video/mp2t")
 
 		read, write := io.Pipe() 
 		cmd.Stdout = write
@@ -104,7 +104,6 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 	})
 
 	r.Get("/gpu/{input}/{profile}", func (w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "video/mp2t")
 		logger := log.With().
 			Str("path", r.URL.Path).
 			Str("module", "ffmpeg").
@@ -126,7 +125,8 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 			return
 		}
 
-		logger.Info().Msg("command startred")
+		logger.Info().Msg("command started")
+		w.Header().Set("Content-Type", "video/mp2t")
 	
 		read, write := io.Pipe()
 		cmd.Stdout = write
