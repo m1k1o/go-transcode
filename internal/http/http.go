@@ -3,6 +3,7 @@ package http
 import (
 	"context"
 	"net/http"
+	"time"
 	"os"
 
 	"github.com/go-chi/chi"
@@ -79,5 +80,8 @@ func (s *ServerCtx) Start() {
 }
 
 func (s *ServerCtx) Shutdown() error {
-	return s.http.Shutdown(context.Background())
+    ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+	defer cancel()
+
+	return s.http.Shutdown(ctx)
 }
