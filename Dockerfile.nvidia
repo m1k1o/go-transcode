@@ -1,0 +1,19 @@
+FROM willprice/nvidia-ffmpeg
+
+WORKDIR /app
+
+ARG USERNAME=user
+ARG USER_UID=1000
+ARG USER_GID=$USER_UID
+
+RUN groupadd --gid $USER_GID $USERNAME; \
+    useradd --uid $USER_UID --gid $USERNAME --shell /bin/bash --create-home $USERNAME;
+
+COPY bin/transcode transcode
+COPY profiles profiles
+COPY profiles_nvidia profiles_nvidia
+
+ENV USER=$USERNAME
+ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+
+ENTRYPOINT ["./transcode"]
