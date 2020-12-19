@@ -57,7 +57,7 @@ docker build -t transcode .
 ### Run
 
 ```sh
-docker run --rm \
+docker run --rm -d \
   --name="transcode" \
   -p "8080:8080" \
   -v "${PWD}/streams.yaml:/app/streams.yaml" transcode
@@ -69,10 +69,11 @@ You will need to have [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) i
 
 ### Build
 
-First, you need to have build previus container and extract binary file from it.
+First, you need to have build and running previus container and extract binary file from it.
 
 ```sh
-docker cp transcode:/app/bin/transcode ./bin
+mkdir bin
+docker cp transcode:/app/bin/transcode ./bin/transcode
 ```
 
 Then, build nvidia container.
@@ -84,7 +85,8 @@ docker build -t transcode_nvidia -f Dockerfile.nvidia .
 ### Run
 
 ```sh
-docker run --rm --gpus=all \
+docker run --rm -d \
+  --gpus=all \
   --name="transcode_nvidia" \
   -p "8080:8080" \
   -v "${PWD}/streams.yaml:/app/streams.yaml" transcode_nvidia
