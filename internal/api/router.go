@@ -28,15 +28,20 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 
 	r.Get("/test1", func (w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "video/mp2t")
+		logger := log.With().
+			Str("path", r.URL.Path).
+			Str("module", "ffmpeg").
+			Logger()
 	
-		log.Info().Msg("command Start")
+		logger.Info().Msg("command startred")
 		cmd := exec.Command("/app/test.sh")
 	
 		read, write := io.Pipe() 
 		cmd.Stdout = write
+		cmd.Stderr = NewLogWriter(logger)
 
 		defer func() {
-			log.Info().Msg("command Stop")
+			logger.Info().Msg("command stopped")
 
 			read.Close()
 			write.Close()
@@ -48,17 +53,22 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 
 	r.Get("/test2", func (w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "video/mp2t")
+		logger := log.With().
+			Str("path", r.URL.Path).
+			Str("module", "ffmpeg").
+			Logger()
 
-		log.Info().Msg("command Start")
+		logger.Info().Msg("command startred")
 		cmd := exec.Command("/app/test.sh")
 
 		read, write := io.Pipe()
 		cmd.Stdout = write
+		cmd.Stderr = NewLogWriter(logger)
 
 		go writeCmdOutput(w, read)
 		cmd.Run()
 		write.Close()
-		log.Info().Msg("command Stop")
+		logger.Info().Msg("command stopped")
 	})
 }
 
