@@ -5,11 +5,11 @@ WORKDIR /app
 #
 # install dependencies
 ENV DEBIAN_FRONTEND=noninteractive
-RUN set -eux; apt-get update; \
-    apt-get install -y --no-install-recommends ffmpeg;
+RUN set -eux; apt update; \
+    apt install -y --no-install-recommends ffmpeg; \
     #
     # clean up
-    apt-get clean -y; \
+    apt clean -y; \
     rm -rf /var/lib/apt/lists/* /var/cache/apt/*
 
 #
