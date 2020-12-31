@@ -23,7 +23,7 @@ build nivdia:
   stage: nvidia
   variables:
     GO_TRANSCODE_IMAGE: $CI_REGISTRY_IMAGE:latest
-    IMAGE_TAG: $CI_REGISTRY_IMAGE-nivdia:latest
+    IMAGE_TAG: $CI_REGISTRY_IMAGE/nivdia:latest
   script:
     - docker build --build-arg "GO_TRANSCODE_IMAGE=${GO_TRANSCODE_IMAGE}" --build-arg "BASE_IMAGE=${NVIDIA_FFMPEG_IMAGE}" -t $IMAGE_TAG -f Dockerfile.nvidia .
     - docker push $IMAGE_TAG
