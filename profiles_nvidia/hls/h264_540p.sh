@@ -1,7 +1,6 @@
 #!/bin/bash
 
-cd "$(dirname "$0")"
-source .helpers.sh
+source "$(dirname "$0")/../.helpers.sh"
 
 ffmpeg -hide_banner -loglevel warning \
   -hwaccel_output_format cuda \
