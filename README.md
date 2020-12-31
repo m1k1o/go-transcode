@@ -51,16 +51,16 @@ Profile names must match flowing regex: `^[0-9A-Za-z_-]+$`
 ### Build
 
 ```sh
-docker build -t transcode .
+docker build -t go-transcode:latest .
 ```
 
 ### Run
 
 ```sh
 docker run --rm -d \
-  --name="transcode" \
+  --name="go-transcode" \
   -p "8080:8080" \
-  -v "${PWD}/streams.yaml:/app/streams.yaml" transcode
+  -v "${PWD}/streams.yaml:/app/streams.yaml" go-transcode:latest
 ```
 
 ## Nvidia GPU support (docker)
@@ -69,17 +69,10 @@ You will need to have [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) i
 
 ### Build
 
-First, you need to have build and running previus container and extract binary file from it.
+First, you need to build previus container. Then, build nvidia container.
 
 ```sh
-mkdir bin
-docker cp transcode:/app/bin/transcode ./bin/transcode
-```
-
-Then, build nvidia container.
-
-```sh
-docker build -t transcode_nvidia -f Dockerfile.nvidia .
+docker build --build-arg "TRANSCODE_IMAGE=go-transcode:latest" -t go-transcode-nvidia:latest -f Dockerfile.nvidia .
 ```
 
 ### Run
@@ -87,9 +80,9 @@ docker build -t transcode_nvidia -f Dockerfile.nvidia .
 ```sh
 docker run --rm -d \
   --gpus=all \
-  --name="transcode_nvidia" \
+  --name="go-transcode-nvidia" \
   -p "8080:8080" \
-  -v "${PWD}/streams.yaml:/app/streams.yaml" transcode_nvidia
+  -v "${PWD}/streams.yaml:/app/streams.yaml" go-transcode-nvidia:latest
 ```
 
 ### Supported inputs

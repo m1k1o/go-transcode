@@ -1,4 +1,8 @@
-FROM willprice/nvidia-ffmpeg
+ARG GO_TRANSCODE_IMAGE=go-transcode:latest
+FROM $GO_TRANSCODE_IMAGE as base
+
+ARG BASE_IMAGE=willprice/nvidia-ffmpeg
+FROM $BASE_IMAGE
 
 WORKDIR /app
 
@@ -9,13 +13,12 @@ ARG USER_GID=$USER_UID
 RUN groupadd --gid $USER_GID $USERNAME; \
     useradd --uid $USER_UID --gid $USERNAME --shell /bin/bash --create-home $USERNAME;
 
-COPY bin bin
-COPY proviles_nvidia profiles
+COPY --from=base bin bin
+COPY profiles_nvidia profiles
 
 ENV USER=$USERNAME
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
 
 ENV TRANSCODE_BIND=:8080
-
 ENTRYPOINT [ "bin/transcode" ]
 CMD [ "serve" ]
