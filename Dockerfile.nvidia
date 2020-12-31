@@ -13,7 +13,7 @@ ARG USER_GID=$USER_UID
 RUN groupadd --gid $USER_GID $USERNAME; \
     useradd --uid $USER_UID --gid $USERNAME --shell /bin/bash --create-home $USERNAME;
 
-COPY --from=build bin bin
+COPY --from=build /app/bin bin
 COPY profiles_nvidia profiles
 
 ENV USER=$USERNAME
