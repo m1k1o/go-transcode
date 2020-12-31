@@ -49,13 +49,13 @@ func init() {
 			case <-shutdown:
 				return
 			case <-ticker.C:
-				logger.Info().Msg("cleanup startred")
+				logger.Debug().Msg("cleanup startred")
 
 				now := time.Now().Unix()
 				for id, profile := range hlsTranscodes {
 					diff := now - profile.last_request
 
-					logger.Info().
+					logger.Debug().
 						Str("id", id).
 						Str("cwd", profile.cwd).
 						Int64("last_request", profile.last_request).
@@ -94,6 +94,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 		re := regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
 		if !re.MatchString(profile) || !re.MatchString(input) {
+			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("400 invalid parameters"))
 			return
 		}
@@ -108,8 +109,9 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 			// if transcode is not running, start
 			hls, err = startHlsTranscode(ID, profile, input)
 			if err != nil {
-				w.Write([]byte(fmt.Sprintf("%v", err)))
 				logger.Warn().Err(err).Msg("transcode could not be started")
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte(fmt.Sprintf("%v", err)))
 				return
 			}
 		}
@@ -119,7 +121,13 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 		// if not active, wait until stream is active
 		if !hls.active {
-			playlist = <- hls.started
+			select {
+			case playlist = <- hls.started:
+			case <-time.After(20 * time.Second):
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("500 not available"))
+				return
+			}
 		}
 
 		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
@@ -135,6 +143,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 		re := regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
 		if !re.MatchString(profile) || !re.MatchString(input) || !re.MatchString(file) {
+			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("400 invalid parameters"))
 			return
 		}
@@ -143,12 +152,14 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 		hls, ok := hlsTranscodes[ID]
 		if !ok {
+			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("404 transcode not found"))
 			return
 		}
 
 		path := hls.cwd + "/" + file + ".ts"
 		if _, err := os.Stat(path); os.IsNotExist(err) {
+			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("404 media not found"))
 			return
 		}
@@ -208,7 +219,7 @@ func startHlsTranscode(id string, profile string, input string) (*HlsTranscode, 
 				hls.playlist = string(buf[:n])
 				hls.sequence = hls.sequence + 1
 
-				logger.Info().
+				logger.Debug().
 					Int("sequence", hls.sequence).
 					Str("str", hls.playlist).
 					Msg("received playlist")
