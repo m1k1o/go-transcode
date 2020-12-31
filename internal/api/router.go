@@ -16,7 +16,7 @@ func init() {
 	var err error
 	conf, err = loadConf("/app/streams.yaml")
 	if err != nil {
-		log.Panic().Err(err).Msg("could not load `streams.yaml` file")
+		panic(err)
 	}
 }
 
