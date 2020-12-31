@@ -98,7 +98,6 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 			return
 		}
 
-		// TOOD: Refactor.
 		ID := profile + "/" + input
 
 		var hls *HlsTranscode
@@ -140,7 +139,6 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 			return
 		}
 
-		// TOOD: Refactor.
 		ID := profile + "/" + input
 
 		hls, ok := hlsTranscodes[ID]
@@ -159,6 +157,11 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 		w.Header().Set("Cache-Control", "no-cache")
 		http.ServeFile(w, r, path)
+	})
+
+	r.Get("/{profile}/{input}/play.html", func (w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		http.ServeFile(w, r, "/app/play.html")
 	})
 }
 

@@ -22,9 +22,12 @@ streams:
   ch2_hd: http://192.168.1.34:9981/stream/channelid/43
 ```
 
-They are accessible via:
+HTTP streaming is accessible via:
 - `http://localhost:8080/<profile>/<stream-id>`
+
+HLS is accessible via:
 - `http://localhost:8080/<profile>/<stream-id>/index.m3u8`
+- `http://localhost:8080/<profile>/<stream-id>/play.html`
 
 ## CPU Profiles
 Profiles (HTTP and HLS) with CPU transcoding can be found in `profiles`:
