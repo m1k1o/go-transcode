@@ -1,0 +1,31 @@
+default:
+  image: docker:19.03.12
+  services:
+    - docker:19.03.12-dind
+  before_script:
+    - docker login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+
+stages:
+  - base
+  - nvidia
+
+build:
+  stage: base
+  variables:
+    BASE_IMAGE: $CI_REGISTRY_IMAGE:latest
+  script:
+    - docker build -t $BASE_IMAGE .
+    - docker push $BASE_IMAGE
+  only:
+    - master
+
+build nivdia:
+  stage: nvidia
+  variables:
+    GO_TRANSCODE_IMAGE: $CI_REGISTRY_IMAGE:latest
+    IMAGE_TAG: $CI_REGISTRY_IMAGE-nivdia:latest
+  script:
+    - docker build --build-arg "GO_TRANSCODE_IMAGE=${GO_TRANSCODE_IMAGE}" --build-arg "BASE_IMAGE=${NVIDIA_FFMPEG_IMAGE} -t $IMAGE_TAG -f Dockerfile.nvidia .
+    - docker push $IMAGE_TAG
+  only:
+    - master
