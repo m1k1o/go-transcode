@@ -15,6 +15,7 @@ RUN groupadd --gid $USER_GID $USERNAME; \
 
 COPY --from=build /app/bin bin
 COPY profiles_nvidia profiles
+COPY data data
 
 ENV USER=$USERNAME
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,video

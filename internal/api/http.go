@@ -23,7 +23,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 			Logger()
 	
 		logger.Info().Msg("command startred")
-		cmd := exec.Command("/app/http-test.sh")
+		cmd := exec.Command("/app/data/http-test.sh")
 	
 		read, write := io.Pipe() 
 		cmd.Stdout = write
