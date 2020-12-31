@@ -22,27 +22,27 @@ streams:
   ch2_hd: http://192.168.1.34:9981/stream/channelid/43
 ```
 
+They are accessible via:
+- `http://localhost:8080/<profile>/<stream-id>`
+- `http://localhost:8080/<profile>/<stream-id>/index.m3u8`
+
 ## CPU Profiles
-Profiles with CPU transcoding can be found in `profiles`:
+Profiles (HTTP and HLS) with CPU transcoding can be found in `profiles`:
 
 * h264_360p
 * h264_540p
 * h264_720p
 * h264_1080p
-
-They are accessible via: `http://localhost:8080/cpu/<profile>/<stream-id>`
 
 Profile names must match flowing regex: `^[0-9A-Za-z_-]+$`
 
 ## GPU Profiles
-Profiles with GPU transcoding can be found in `profiles_nvidia`:
+Profiles (HTTP and HLS) with GPU transcoding can be found in `profiles_nvidia`:
 
 * h264_360p
 * h264_540p
 * h264_720p
 * h264_1080p
-
-They are accessible via: `http://localhost:8080/gpu/<profile>/<stream-id>`
 
 Profile names must match flowing regex: `^[0-9A-Za-z_-]+$`
 

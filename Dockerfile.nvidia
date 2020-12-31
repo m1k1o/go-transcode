@@ -10,8 +10,7 @@ RUN groupadd --gid $USER_GID $USERNAME; \
     useradd --uid $USER_UID --gid $USERNAME --shell /bin/bash --create-home $USERNAME;
 
 COPY bin bin
-COPY profiles profiles
-COPY profiles_nvidia profiles_nvidia
+COPY proviles_nvidia profiles
 
 ENV USER=$USERNAME
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
