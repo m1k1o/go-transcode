@@ -1,13 +1,13 @@
 # Go live HTTP on-demand transcoding
-Transcoding is expensive and resource consuming operation on CPU and GPU. For big companies with thousands of customer it is essential, to have a dedicated 24/7 transconding servers. But we, single sporadic users of transcoding, need to have different approach. Transcoding should be done only when its output is really needed. This tool is trying to solve this problem by offering transcoding on demand.
+Transcoding is expensive and resource consuming operation on CPU and GPU. For big companies with thousands of customers it is essential, to have a dedicated 24/7 transcoding servers. But we, single sporadic users of transcoding, need to have different approach. Transcoding should be done only when its output is really needed. This tool is trying to solve this problem by offering transcoding on demand.
 
-This tool is indended to be used with live streams only. Seeking is not supported, yet.
+This tool is intended to be used with live streams only. Seeking is not supported, yet.
 
 ## Config
 Specify streams as object in yaml file.
 
 ### Streams
-Create `streams.yaml` file, with your sreams:
+Create `streams.yaml` file, with your streams:
 
 ```yaml
 streams:
@@ -72,7 +72,7 @@ You will need to have [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) i
 
 ### Build
 
-First, you need to build previus container. Then, build nvidia container.
+First, you need to build previous container. Then, build Nvidia container.
 
 ```sh
 docker build --build-arg "TRANSCODE_IMAGE=go-transcode:latest" -t go-transcode-nvidia:latest -f Dockerfile.nvidia .
