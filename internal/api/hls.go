@@ -9,11 +9,10 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
 
-	"github.com/m1k1o/go-transcode/internal/hls"
-	"github.com/m1k1o/go-transcode/internal/types"
+	"github.com/m1k1o/go-transcode/hls"
 )
 
-var hlsManagers map[string]types.HlsManager = make(map[string]types.HlsManager)
+var hlsManagers map[string]hls.Manager = make(map[string]hls.Manager)
 
 func (a *ApiManagerCtx) HLS(r chi.Router) {
 	r.Get("/{profile}/{input}/index.m3u8", func(w http.ResponseWriter, r *http.Request) {

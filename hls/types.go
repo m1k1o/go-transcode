@@ -1,8 +1,8 @@
-package types
+package hls
 
 import "net/http"
 
-type HlsManager interface {
+type Manager interface {
 	Start() error
 	Stop()
 	Cleanup()

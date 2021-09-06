@@ -11,16 +11,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/m1k1o/go-transcode/internal/utils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+
+	"github.com/m1k1o/go-transcode/internal/utils"
 )
 
 const cleanupPeriod = 2 * time.Second
 const hlsMinimumSegments = 2
 const hlsSegmentDuration = 6
 
-type HlsManagerCtx struct {
+type ManagerCtx struct {
 	logger     zerolog.Logger
 	mu         sync.Mutex
 	cmdFactory func() *exec.Cmd
@@ -37,8 +38,8 @@ type HlsManagerCtx struct {
 	shutdown     chan interface{}
 }
 
-func New(cmdFactory func() *exec.Cmd) *HlsManagerCtx {
-	return &HlsManagerCtx{
+func New(cmdFactory func() *exec.Cmd) *ManagerCtx {
+	return &ManagerCtx{
 		logger:     log.With().Str("module", "hls").Str("submodule", "manager").Logger(),
 		cmdFactory: cmdFactory,
 
@@ -47,7 +48,7 @@ func New(cmdFactory func() *exec.Cmd) *HlsManagerCtx {
 	}
 }
 
-func (m *HlsManagerCtx) Start() error {
+func (m *ManagerCtx) Start() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -129,7 +130,7 @@ func (m *HlsManagerCtx) Start() error {
 	return m.cmd.Start()
 }
 
-func (m *HlsManagerCtx) Stop() {
+func (m *ManagerCtx) Stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -152,7 +153,7 @@ func (m *HlsManagerCtx) Stop() {
 	})
 }
 
-func (m *HlsManagerCtx) Cleanup() {
+func (m *ManagerCtx) Cleanup() {
 	diff := time.Now().Unix() - m.lastRequest
 	stop := m.active && diff > 2*hlsSegmentDuration || !m.active && diff > 4*hlsSegmentDuration
 
@@ -168,7 +169,7 @@ func (m *HlsManagerCtx) Cleanup() {
 	}
 }
 
-func (m *HlsManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
+func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	m.lastRequest = time.Now().Unix()
 	playlist := m.playlist
 
@@ -198,7 +199,7 @@ func (m *HlsManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(playlist))
 }
 
-func (m *HlsManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
+func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	fileName := path.Base(r.URL.RequestURI())
 	path := path.Join(m.tempdir, fileName)
 
