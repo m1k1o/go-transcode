@@ -169,8 +169,6 @@ func (m *HlsManagerCtx) Cleanup() {
 }
 
 func (m *HlsManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
-	m.logger.Debug().Msg("playlist request")
-
 	m.lastRequest = time.Now().Unix()
 	playlist := m.playlist
 
@@ -203,8 +201,6 @@ func (m *HlsManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 func (m *HlsManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	fileName := path.Base(r.URL.RequestURI())
 	path := path.Join(m.tempdir, fileName)
-
-	m.logger.Debug().Str("path", path).Msg("media file request")
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		m.logger.Warn().Str("path", path).Msg("media file not found")
