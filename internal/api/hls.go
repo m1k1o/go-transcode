@@ -12,6 +12,8 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
+
+	"github.com/m1k1o/go-transcode/internal/utils"
 )
 
 const (
@@ -133,7 +135,6 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Write([]byte(playlist))
-		return
 	})
 
 	r.Get("/{profile}/{input}/{file}.ts", func(w http.ResponseWriter, r *http.Request) {
@@ -193,7 +194,7 @@ func startHlsTranscode(id string, profile string, input string) (*HlsTranscode, 
 	}
 
 	cmd.Dir = cwd
-	cmd.Stderr = NewLogWriter(logger)
+	cmd.Stderr = utils.LogWriter(logger)
 
 	read, write := io.Pipe()
 	cmd.Stdout = write

@@ -8,6 +8,8 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
+
+	"github.com/m1k1o/go-transcode/internal/utils"
 )
 
 const (
@@ -27,7 +29,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 
 		read, write := io.Pipe()
 		cmd.Stdout = write
-		cmd.Stderr = NewLogWriter(logger)
+		cmd.Stderr = utils.LogWriter(logger)
 
 		defer func() {
 			logger.Info().Msg("command stopped")
@@ -62,7 +64,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 
 		read, write := io.Pipe()
 		cmd.Stdout = write
-		cmd.Stderr = NewLogWriter(logger)
+		cmd.Stderr = utils.LogWriter(logger)
 
 		defer func() {
 			logger.Info().Msg("command stopped")
@@ -97,7 +99,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 
 		read, write := io.Pipe()
 		cmd.Stdout = write
-		cmd.Stderr = NewLogWriter(logger)
+		cmd.Stderr = utils.LogWriter(logger)
 
 		go writeCmdOutput(w, read)
 		cmd.Run()
