@@ -4,13 +4,13 @@ import (
 	"os"
 	"os/signal"
 
-	"m1k1o/transcode/internal/config"
-	"m1k1o/transcode/internal/api"
-	"m1k1o/transcode/internal/http"
-
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
+
+	"github.com/m1k1o/go-transcode/internal/api"
+	"github.com/m1k1o/go-transcode/internal/config"
+	"github.com/m1k1o/go-transcode/internal/http"
 )
 
 var Service *Main
@@ -26,9 +26,9 @@ type Main struct {
 	RootConfig   *config.Root
 	ServerConfig *config.Server
 
-	logger       zerolog.Logger
-	apiManager   *api.ApiManagerCtx
-	server       *http.ServerCtx
+	logger     zerolog.Logger
+	apiManager *api.ApiManagerCtx
+	server     *http.ServerCtx
 }
 
 func (main *Main) Preflight() {

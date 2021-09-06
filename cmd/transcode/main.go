@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/rs/zerolog/log"
 
-	"m1k1o/transcode/cmd"
+	"github.com/m1k1o/go-transcode/cmd"
 )
 
 func main() {

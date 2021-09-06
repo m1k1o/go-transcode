@@ -3,16 +3,16 @@ package http
 import (
 	"context"
 	"net/http"
-	"time"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"m1k1o/transcode/internal/types"
-	"m1k1o/transcode/internal/config"
+	"github.com/m1k1o/go-transcode/internal/config"
+	"github.com/m1k1o/go-transcode/internal/types"
 )
 
 type ServerCtx struct {
@@ -28,7 +28,7 @@ func New(ApiManager types.ApiManager, conf *config.Server) *ServerCtx {
 	router := chi.NewRouter()
 	router.Use(middleware.Recoverer) // Recover from panics without crashing server
 	router.Use(middleware.RequestID) // Create a request ID for each request
-	router.Use(Logger) // Log API request calls using custom logger function
+	router.Use(Logger)               // Log API request calls using custom logger function
 
 	ApiManager.Mount(router)
 
@@ -80,7 +80,7 @@ func (s *ServerCtx) Start() {
 }
 
 func (s *ServerCtx) Shutdown() error {
-    ctx, cancel := context.WithTimeout(context.Background(), 5 * time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	return s.http.Shutdown(ctx)

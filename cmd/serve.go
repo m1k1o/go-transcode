@@ -4,8 +4,8 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"m1k1o/transcode"
-	"m1k1o/transcode/internal/config"
+	"github.com/m1k1o/go-transcode"
+	"github.com/m1k1o/go-transcode/internal/config"
 )
 
 func init() {

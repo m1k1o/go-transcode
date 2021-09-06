@@ -2,16 +2,17 @@ package api
 
 import (
 	"fmt"
-	"regexp"
+	"net/http"
 	"os"
 	"os/exec"
-	"net/http"
+	"regexp"
 
 	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
 )
 
 var conf *YamlConf
+
 func init() {
 	var err error
 	conf, err = loadConf("/app/streams.yaml")
@@ -20,7 +21,7 @@ func init() {
 	}
 }
 
-type ApiManagerCtx struct {}
+type ApiManagerCtx struct{}
 
 func New() *ApiManagerCtx {
 
@@ -28,7 +29,7 @@ func New() *ApiManagerCtx {
 }
 
 func (a *ApiManagerCtx) Mount(r *chi.Mux) {
-	r.Get("/ping", func (w http.ResponseWriter, r *http.Request) {
+	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		//nolint
 		w.Write([]byte("pong"))
 	})

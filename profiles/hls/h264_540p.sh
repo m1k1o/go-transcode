@@ -1,6 +1,6 @@
 #!/bin/sh
 
-ffmpeg -hide_banner -loglevel warning \
+exec ffmpeg -hide_banner -loglevel warning \
   -i "${1}" \
   -map 0:v:0 -map 0:a:0 \
   -vf scale=w=960:h=540:force_original_aspect_ratio=decrease \
