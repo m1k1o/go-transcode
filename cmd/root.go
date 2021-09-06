@@ -9,18 +9,17 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"m1k1o/transcode"
+	"github.com/m1k1o/go-transcode"
 )
-
 
 func Execute() error {
 	return root.Execute()
 }
 
 var root = &cobra.Command{
-	Use:     "transcode",
-	Short:   "transcode server",
-	Long:    `transcode server`,
+	Use:   "transcode",
+	Short: "transcode server",
+	Long:  `transcode server`,
 }
 
 func init() {
