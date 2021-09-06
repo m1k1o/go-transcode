@@ -21,12 +21,12 @@ const hlsMinimumSegments = 2
 const hlsSegmentDuration = 6
 
 type HlsManagerCtx struct {
-	logger  zerolog.Logger
-	mu      sync.Mutex
-	cmd     *exec.Cmd
-	active  bool
-	started bool
+	logger     zerolog.Logger
+	mu         sync.Mutex
+	cmdFactory func() *exec.Cmd
+	active     bool
 
+	cmd         *exec.Cmd
 	tempdir     string
 	lastRequest int64
 
@@ -34,16 +34,16 @@ type HlsManagerCtx struct {
 	playlist string
 
 	playlistLoad chan string
-	stopCleanup  chan interface{}
+	shutdown     chan interface{}
 }
 
-func New(cmd *exec.Cmd) *HlsManagerCtx {
+func New(cmdFactory func() *exec.Cmd) *HlsManagerCtx {
 	return &HlsManagerCtx{
-		logger: log.With().Str("module", "hls").Str("submodule", "manager").Logger(),
-		cmd:    cmd,
+		logger:     log.With().Str("module", "hls").Str("submodule", "manager").Logger(),
+		cmdFactory: cmdFactory,
 
 		playlistLoad: make(chan string),
-		stopCleanup:  make(chan interface{}),
+		shutdown:     make(chan interface{}),
 	}
 }
 
@@ -51,11 +51,11 @@ func (m *HlsManagerCtx) Start() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.logger.Debug().Msg("performing start")
-
-	if m.started {
+	if m.cmd != nil {
 		return errors.New("has already started")
 	}
+
+	m.logger.Debug().Msg("performing start")
 
 	var err error
 	m.tempdir, err = os.MkdirTemp("", "go-transcode-hls")
@@ -63,6 +63,7 @@ func (m *HlsManagerCtx) Start() error {
 		return err
 	}
 
+	m.cmd = m.cmdFactory()
 	m.cmd.Dir = m.tempdir
 	m.cmd.Stderr = utils.LogWriter(m.logger)
 
@@ -73,14 +74,14 @@ func (m *HlsManagerCtx) Start() error {
 		Pdeathsig: syscall.SIGTERM,
 	}
 
-	m.started = true
+	m.active = false
 	m.lastRequest = time.Now().Unix()
 
 	m.sequence = 0
 	m.playlist = ""
 
 	m.playlistLoad = make(chan string)
-	m.stopCleanup = make(chan interface{})
+	m.shutdown = make(chan interface{})
 
 	go func() {
 		buf := make([]byte, 1024)
@@ -91,7 +92,7 @@ func (m *HlsManagerCtx) Start() error {
 				m.playlist = string(buf[:n])
 				m.sequence = m.sequence + 1
 
-				m.logger.Debug().
+				m.logger.Info().
 					Int("sequence", m.sequence).
 					Str("playlist", m.playlist).
 					Msg("received playlist")
@@ -105,11 +106,9 @@ func (m *HlsManagerCtx) Start() error {
 
 			if err != nil {
 				m.logger.Err(err).Msg("cmd read failed")
-				break
+				return
 			}
 		}
-
-		write.Close()
 	}()
 
 	go func() {
@@ -118,7 +117,8 @@ func (m *HlsManagerCtx) Start() error {
 
 		for {
 			select {
-			case <-m.stopCleanup:
+			case <-m.shutdown:
+				write.Close()
 				return
 			case <-ticker.C:
 				m.Cleanup()
@@ -133,18 +133,17 @@ func (m *HlsManagerCtx) Stop() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.logger.Debug().Msg("performing stop")
-
-	if !m.started {
+	if m.cmd == nil {
 		return
 	}
 
-	m.started = false
-	m.stopCleanup <- struct{}{}
+	m.logger.Debug().Msg("performing stop")
+	close(m.shutdown)
 
 	if m.cmd.Process != nil {
 		err := m.cmd.Process.Kill()
 		m.logger.Err(err).Msg("killing proccess")
+		m.cmd = nil
 	}
 
 	err := os.RemoveAll(m.tempdir)
@@ -173,7 +172,7 @@ func (m *HlsManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	m.lastRequest = time.Now().Unix()
 	playlist := m.playlist
 
-	if !m.started {
+	if m.cmd == nil {
 		err := m.Start()
 		if err != nil {
 			m.logger.Warn().Err(err).Msg("transcode could not be started")
