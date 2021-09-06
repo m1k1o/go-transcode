@@ -2,7 +2,7 @@
 
 source "$(dirname "$0")/../.helpers.sh"
 
-ffmpeg -hide_banner -loglevel warning \
+exec ffmpeg -hide_banner -loglevel warning \
   -hwaccel_output_format cuda \
   -c:v "$(cuvid_codec "${1}")" \
   -i "${1}" \
