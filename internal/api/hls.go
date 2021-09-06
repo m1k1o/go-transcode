@@ -1,14 +1,14 @@
 package api
 
 import (
-    "io"
-    "os"
 	"fmt"
-	"time"
-    "regexp"
-	"os/exec"
-	"syscall"
+	"io"
 	"net/http"
+	"os"
+	"os/exec"
+	"regexp"
+	"syscall"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
@@ -16,7 +16,7 @@ import (
 
 const (
 	HLS_SEG_DURATION = 6
-	HLS_MIN_SEG = 2
+	HLS_MIN_SEG      = 2
 )
 
 type HlsTranscode struct {
@@ -24,10 +24,10 @@ type HlsTranscode struct {
 	last_request int64
 	cmd          *exec.Cmd
 
-	sequence     int
-	playlist     string
-	active       bool
-	started      chan string
+	sequence int
+	playlist string
+	active   bool
+	started  chan string
 }
 
 var hlsTranscodes map[string]*HlsTranscode = make(map[string]*HlsTranscode)
@@ -37,7 +37,7 @@ func init() {
 	const pingPeriod = 2 * time.Second
 	ticker := time.NewTicker(pingPeriod)
 
-	go func(){
+	go func() {
 		logger := log.With().
 			Str("module", "hls cleanup").
 			Logger()
@@ -61,8 +61,8 @@ func init() {
 						Int64("last_request", profile.last_request).
 						Int64("diff", diff).
 						Msg("active profile")
-					
-					if profile.active && diff > 2 * HLS_SEG_DURATION || !profile.active && diff > 4 * HLS_SEG_DURATION  {
+
+					if profile.active && diff > 2*HLS_SEG_DURATION || !profile.active && diff > 4*HLS_SEG_DURATION {
 						logger.Info().
 							Str("id", id).
 							Msg("killing process")
@@ -84,7 +84,7 @@ func init() {
 }
 
 func (a *ApiManagerCtx) HLS(r chi.Router) {
-	r.Get("/{profile}/{input}/index.m3u8", func (w http.ResponseWriter, r *http.Request) {
+	r.Get("/{profile}/{input}/index.m3u8", func(w http.ResponseWriter, r *http.Request) {
 		logger := log.With().
 			Str("module", "m3u8").
 			Logger()
@@ -122,7 +122,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		// if not active, wait until stream is active
 		if !hls.active {
 			select {
-			case playlist = <- hls.started:
+			case playlist = <-hls.started:
 			case <-time.After(20 * time.Second):
 				w.WriteHeader(http.StatusInternalServerError)
 				w.Write([]byte("500 not available"))
@@ -136,7 +136,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		return
 	})
 
-	r.Get("/{profile}/{input}/{file}.ts", func (w http.ResponseWriter, r *http.Request) {
+	r.Get("/{profile}/{input}/{file}.ts", func(w http.ResponseWriter, r *http.Request) {
 		profile := chi.URLParam(r, "profile")
 		input := chi.URLParam(r, "input")
 		file := chi.URLParam(r, "file")
@@ -170,7 +170,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		http.ServeFile(w, r, path)
 	})
 
-	r.Get("/{profile}/{input}/play.html", func (w http.ResponseWriter, r *http.Request) {
+	r.Get("/{profile}/{input}/play.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		http.ServeFile(w, r, "/app/data/play.html")
 	})
@@ -194,7 +194,7 @@ func startHlsTranscode(id string, profile string, input string) (*HlsTranscode, 
 
 	cmd.Dir = cwd
 	cmd.Stderr = NewLogWriter(logger)
-	
+
 	read, write := io.Pipe()
 	cmd.Stdout = write
 
