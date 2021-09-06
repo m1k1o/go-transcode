@@ -12,10 +12,6 @@ import (
 	"github.com/m1k1o/go-transcode/internal/utils"
 )
 
-const (
-	BUF_LEN = 1024
-)
-
 func (a *ApiManagerCtx) Http(r chi.Router) {
 	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "video/mp2t")
@@ -101,39 +97,9 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		cmd.Stdout = write
 		cmd.Stderr = utils.LogWriter(logger)
 
-		go writeCmdOutput(w, read)
+		go utils.IOPipeToHTTP(w, read)
 		cmd.Run()
 		write.Close()
 		logger.Info().Msg("command stopped")
 	})
-}
-
-func writeCmdOutput(w http.ResponseWriter, read *io.PipeReader) {
-	buffer := make([]byte, BUF_LEN)
-
-	for {
-		n, err := read.Read(buffer)
-		if err != nil {
-			read.Close()
-			break
-		}
-
-		data := buffer[0:n]
-		_, err = w.Write(data)
-		if err != nil {
-			read.Close()
-			break
-		}
-
-		if f, ok := w.(http.Flusher); ok {
-			f.Flush()
-		} else {
-			log.Info().Msg("Damn, no flush")
-		}
-
-		// reset buffer
-		for i := 0; i < n; i++ {
-			buffer[i] = 0
-		}
-	}
 }
