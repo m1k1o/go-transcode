@@ -37,7 +37,7 @@ type HlsManagerCtx struct {
 	stopCleanup  chan interface{}
 }
 
-func newHlsManager(cmd *exec.Cmd) *HlsManagerCtx {
+func New(cmd *exec.Cmd) *HlsManagerCtx {
 	return &HlsManagerCtx{
 		logger: log.With().Str("module", "hls").Str("submodule", "manager").Logger(),
 		cmd:    cmd,
