@@ -71,7 +71,7 @@ func (m *HlsManagerCtx) Start() error {
 	m.cmd.Stdout = write
 
 	m.cmd.SysProcAttr = &syscall.SysProcAttr{
-		Pdeathsig: syscall.SIGTERM,
+		Pdeathsig: syscall.SIGINT,
 	}
 
 	m.active = false
@@ -146,8 +146,10 @@ func (m *HlsManagerCtx) Stop() {
 		m.cmd = nil
 	}
 
-	err := os.RemoveAll(m.tempdir)
-	m.logger.Err(err).Msg("removing tempdir")
+	time.AfterFunc(2*time.Second, func() {
+		err := os.RemoveAll(m.tempdir)
+		m.logger.Err(err).Msg("removing tempdir")
+	})
 }
 
 func (m *HlsManagerCtx) Cleanup() {
