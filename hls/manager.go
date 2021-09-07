@@ -27,10 +27,10 @@ const playlistTimeout = 20 * time.Second
 const hlsMinimumSegments = 2
 
 // how long must be active stream idle to be considered as dead
-const activeIdleTimeout = 12
+const activeIdleTimeout = 12 * time.Second
 
 // how long must be iactive stream idle to be considered as dead
-const inactiveIdleTimeout = 24
+const inactiveIdleTimeout = 24 * time.Second
 
 type ManagerCtx struct {
 	logger     zerolog.Logger
@@ -40,7 +40,7 @@ type ManagerCtx struct {
 
 	cmd         *exec.Cmd
 	tempdir     string
-	lastRequest int64
+	lastRequest time.Time
 
 	sequence int
 	playlist string
@@ -87,7 +87,7 @@ func (m *ManagerCtx) Start() error {
 	}
 
 	m.active = false
-	m.lastRequest = time.Now().Unix()
+	m.lastRequest = time.Now()
 
 	m.sequence = 0
 	m.playlist = ""
@@ -166,12 +166,14 @@ func (m *ManagerCtx) Stop() {
 }
 
 func (m *ManagerCtx) Cleanup() {
-	diff := time.Now().Unix() - m.lastRequest
+	m.mu.Lock()
+	diff := time.Since(m.lastRequest)
 	stop := m.active && diff > activeIdleTimeout || !m.active && diff > inactiveIdleTimeout
+	m.mu.Unlock()
 
 	m.logger.Debug().
-		Int64("last_request", m.lastRequest).
-		Int64("diff", diff).
+		Time("last_request", m.lastRequest).
+		Dur("diff", diff).
 		Bool("active", m.active).
 		Bool("stop", stop).
 		Msg("performing cleanup")
@@ -182,7 +184,10 @@ func (m *ManagerCtx) Cleanup() {
 }
 
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
-	m.lastRequest = time.Now().Unix()
+	m.mu.Lock()
+	m.lastRequest = time.Now()
+	m.mu.Unlock()
+
 	playlist := m.playlist
 
 	if m.cmd == nil {
@@ -227,7 +232,10 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	m.lastRequest = time.Now().Unix()
+	m.mu.Lock()
+	m.lastRequest = time.Now()
+	m.mu.Unlock()
+
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 	w.Header().Set("Cache-Control", "no-cache")
 	http.ServeFile(w, r, path)
