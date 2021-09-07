@@ -83,7 +83,7 @@ func (m *ManagerCtx) Start() error {
 	m.cmd = m.cmdFactory()
 	m.cmd.Dir = m.tempdir
 
-	if m.events.onStart != nil {
+	if m.events.onCmdLog != nil {
 		m.cmd.Stderr = utils.LogEvent(m.events.onCmdLog)
 	} else {
 		m.cmd.Stderr = utils.LogWriter(m.logger)
