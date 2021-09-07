@@ -17,10 +17,20 @@ import (
 	"github.com/m1k1o/go-transcode/internal/utils"
 )
 
-const cleanupPeriod = 2 * time.Second
+// how often should be cleanup called
+const cleanupPeriod = 4 * time.Second
+
+// timeot for first playlist, when it waits for new data
 const playlistTimeout = 20 * time.Second
+
+// minimum segments available to consider stream as active
 const hlsMinimumSegments = 2
-const hlsSegmentDuration = 6
+
+// how long must be active stream idle to be considered as dead
+const activeIdleTimeout = 12
+
+// how long must be iactive stream idle to be considered as dead
+const inactiveIdleTimeout = 24
 
 type ManagerCtx struct {
 	logger     zerolog.Logger
@@ -157,7 +167,7 @@ func (m *ManagerCtx) Stop() {
 
 func (m *ManagerCtx) Cleanup() {
 	diff := time.Now().Unix() - m.lastRequest
-	stop := m.active && diff > 2*hlsSegmentDuration || !m.active && diff > 4*hlsSegmentDuration
+	stop := m.active && diff > activeIdleTimeout || !m.active && diff > inactiveIdleTimeout
 
 	m.logger.Debug().
 		Int64("last_request", m.lastRequest).
