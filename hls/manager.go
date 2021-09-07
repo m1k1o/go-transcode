@@ -37,6 +37,11 @@ type ManagerCtx struct {
 	mu         sync.Mutex
 	cmdFactory func() *exec.Cmd
 	active     bool
+	events     struct {
+		onStart  func()
+		onCmdLog func(message string)
+		onStop   func()
+	}
 
 	cmd         *exec.Cmd
 	tempdir     string
@@ -77,7 +82,12 @@ func (m *ManagerCtx) Start() error {
 
 	m.cmd = m.cmdFactory()
 	m.cmd.Dir = m.tempdir
-	m.cmd.Stderr = utils.LogWriter(m.logger)
+
+	if m.events.onStart != nil {
+		m.cmd.Stderr = utils.LogEvent(m.events.onCmdLog)
+	} else {
+		m.cmd.Stderr = utils.LogWriter(m.logger)
+	}
 
 	read, write := io.Pipe()
 	m.cmd.Stdout = write
@@ -138,6 +148,10 @@ func (m *ManagerCtx) Start() error {
 		}
 	}()
 
+	if m.events.onStart != nil {
+		m.events.onStart()
+	}
+
 	return m.cmd.Start()
 }
 
@@ -162,6 +176,10 @@ func (m *ManagerCtx) Stop() {
 		err := os.RemoveAll(m.tempdir)
 		m.logger.Err(err).Msg("removing tempdir")
 	})
+
+	if m.events.onStop != nil {
+		m.events.onStop()
+	}
 }
 
 func (m *ManagerCtx) Cleanup() {
@@ -238,4 +256,16 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 	w.Header().Set("Cache-Control", "no-cache")
 	http.ServeFile(w, r, path)
+}
+
+func (m *ManagerCtx) OnStart(event func()) {
+	m.events.onStart = event
+}
+
+func (m *ManagerCtx) OnCmdLog(event func(message string)) {
+	m.events.onCmdLog = event
+}
+
+func (m *ManagerCtx) OnStop(event func()) {
+	m.events.onStop = event
 }
