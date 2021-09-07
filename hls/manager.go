@@ -151,7 +151,6 @@ func (m *ManagerCtx) Stop() {
 
 	m.logger.Debug().Msg("performing stop")
 	close(m.shutdown)
-	close(m.playlistLoad)
 
 	if m.cmd.Process != nil {
 		err := m.cmd.Process.Kill()
