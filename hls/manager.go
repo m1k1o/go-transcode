@@ -140,6 +140,7 @@ func (m *ManagerCtx) Stop() {
 
 	m.logger.Debug().Msg("performing stop")
 	close(m.shutdown)
+	close(m.playlistLoad)
 
 	if m.cmd.Process != nil {
 		err := m.cmd.Process.Kill()
@@ -186,6 +187,11 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	if !m.active {
 		select {
 		case playlist = <-m.playlistLoad:
+		case <-m.shutdown:
+			m.logger.Warn().Msg("playlist load failed because of shutdown")
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("404 playlist not found"))
+			return
 		case <-time.After(20 * time.Second):
 			m.logger.Warn().Msg("playlist load channel timeouted")
 			w.WriteHeader(http.StatusInternalServerError)
