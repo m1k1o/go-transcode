@@ -18,6 +18,7 @@ import (
 )
 
 const cleanupPeriod = 2 * time.Second
+const playlistTimeout = 20 * time.Second
 const hlsMinimumSegments = 2
 const hlsSegmentDuration = 6
 
@@ -192,7 +193,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("404 playlist not found"))
 			return
-		case <-time.After(20 * time.Second):
+		case <-time.After(playlistTimeout):
 			m.logger.Warn().Msg("playlist load channel timeouted")
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte("500 not available"))
