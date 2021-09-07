@@ -92,9 +92,8 @@ func (m *ManagerCtx) Start() error {
 	read, write := io.Pipe()
 	m.cmd.Stdout = write
 
-	m.cmd.SysProcAttr = &syscall.SysProcAttr{
-		Pdeathsig: syscall.SIGINT,
-	}
+	//create a new process group
+	m.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 
 	m.active = false
 	m.lastRequest = time.Now()
@@ -167,8 +166,15 @@ func (m *ManagerCtx) Stop() {
 	close(m.shutdown)
 
 	if m.cmd.Process != nil {
-		err := m.cmd.Process.Kill()
-		m.logger.Err(err).Msg("killing proccess")
+		pgid, err := syscall.Getpgid(m.cmd.Process.Pid)
+		if err == nil {
+			err := syscall.Kill(-pgid, syscall.SIGKILL)
+			m.logger.Err(err).Msg("killing proccess group")
+		} else {
+			m.logger.Err(err).Msg("could not get proccess group id")
+			err := m.cmd.Process.Kill()
+			m.logger.Err(err).Msg("killing proccess")
+		}
 		m.cmd = nil
 	}
 
