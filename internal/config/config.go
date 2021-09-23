@@ -30,9 +30,15 @@ func LoadConf(path string) (*YamlConf, error) {
 		return nil, err
 	}
 
+	// If basedir is not explicit in config, try /etc/go-transcode/,
+	// fallback to the current working directory
 	if conf.BaseDir == "" {
-		cwd, _ := os.Getwd()
-		conf.BaseDir = cwd
+		if _, err := os.Stat("/etc/go-transcode"); os.IsNotExist(err) {
+			cwd, _ := os.Getwd()
+			conf.BaseDir = cwd
+		} else {
+			conf.BaseDir = "/etc/go-transcode"
+		}
 	}
 
 	return conf, nil
