@@ -22,7 +22,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 
 		logger.Info().Msg("command startred")
 		// WTF is this for?
-		cmd := exec.Command("data/http-test.sh")
+		cmd := exec.Command(fmt.Sprintf("%s/%s", a.Conf.BaseDir, "data/http-test.sh"))
 
 		read, write := io.Pipe()
 		cmd.Stdout = write

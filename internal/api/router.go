@@ -9,20 +9,22 @@ import (
 
 	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
+
+	"github.com/m1k1o/go-transcode/internal/config"
 )
 
-var conf *YamlConf
+var conf *config.YamlConf
 
 func init() {
 	var err error
-	conf, err = loadConf("streams.yaml")
+	conf, err = config.LoadConf("streams.yaml")
 	if err != nil {
 		panic(err)
 	}
 }
 
 type ApiManagerCtx struct {
-	Conf *YamlConf
+	Conf *config.YamlConf
 }
 
 func New() *ApiManagerCtx {
@@ -50,7 +52,7 @@ func transcodeStart(folder string, profile string, input string) (*exec.Cmd, err
 		return nil, fmt.Errorf("invalid profile path")
 	}
 
-	profilePath := fmt.Sprintf("%s/%s.sh", folder, profile)
+	profilePath := fmt.Sprintf("%s/%s/%s.sh", conf.BaseDir, folder, profile)
 	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
 		return nil, err
 	}

@@ -52,7 +52,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 				}
 
 				return cmd
-			})
+			}, a.Conf)
 
 			hlsManagers[ID] = manager
 		}
@@ -86,6 +86,6 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 	r.Get("/{profile}/{input}/play.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		http.ServeFile(w, r, "data/play.html")
+		http.ServeFile(w, r, fmt.Sprintf("%s/%s", a.Conf.BaseDir, "data/play.html"))
 	})
 }
