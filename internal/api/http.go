@@ -21,7 +21,8 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 			Logger()
 
 		logger.Info().Msg("command startred")
-		cmd := exec.Command("/app/data/http-test.sh")
+		// WTF is this for?
+		cmd := exec.Command("data/http-test.sh")
 
 		read, write := io.Pipe()
 		cmd.Stdout = write
@@ -46,6 +47,13 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 
 		profile := chi.URLParam(r, "profile")
 		input := chi.URLParam(r, "input")
+
+		_, stream_exists := a.Conf.Streams[input]
+		if !stream_exists {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("404 not found"))
+			return
+		}
 
 		cmd, err := transcodeStart("profiles/http", profile, input)
 		if err != nil {

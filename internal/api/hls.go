@@ -30,6 +30,13 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 			return
 		}
 
+		_, stream_exists := a.Conf.Streams[input]
+		if !stream_exists {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("404 not found"))
+			return
+		}
+
 		ID := fmt.Sprintf("%s/%s", profile, input)
 
 		manager, ok := hlsManagers[ID]
@@ -39,7 +46,9 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 				// get transcode cmd
 				cmd, err := transcodeStart("profiles/hls", profile, input)
 				if err != nil {
-					logger.Panic().Err(err).Msg("transcode could not be started")
+					logger.Error().Err(err).Msg("transcode could not be started")
+					w.WriteHeader(http.StatusInternalServerError)
+					w.Write([]byte(fmt.Sprintf("%v\n", err)))
 				}
 
 				return cmd

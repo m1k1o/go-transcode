@@ -2,6 +2,7 @@ package hls
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -21,7 +22,7 @@ import (
 const cleanupPeriod = 4 * time.Second
 
 // timeot for first playlist, when it waits for new data
-const playlistTimeout = 20 * time.Second
+const playlistTimeout = 60 * time.Second
 
 // minimum segments available to consider stream as active
 const hlsMinimumSegments = 2
@@ -82,12 +83,16 @@ func (m *ManagerCtx) Start() error {
 
 	m.cmd = m.cmdFactory()
 	m.cmd.Dir = m.tempdir
+	//fmt.Println(m.cmd.Dir)
 
 	if m.events.onCmdLog != nil {
 		m.cmd.Stderr = utils.LogEvent(m.events.onCmdLog)
 	} else {
 		m.cmd.Stderr = utils.LogWriter(m.logger)
 	}
+
+	cwd, _ := os.Getwd()
+	m.cmd.Path = fmt.Sprintf("%s/%s", cwd, m.cmd.Path)
 
 	read, write := io.Pipe()
 	m.cmd.Stdout = write
@@ -126,6 +131,7 @@ func (m *ManagerCtx) Start() error {
 			}
 
 			if err != nil {
+				// When command fails to start, we reach this branch after a while
 				m.logger.Err(err).Msg("cmd read failed")
 				return
 			}
@@ -229,6 +235,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		case <-m.shutdown:
 			m.logger.Warn().Msg("playlist load failed because of shutdown")
 			w.WriteHeader(http.StatusNotFound)
+			// When command failed to start and timeout has been increased we reach this branch after a while
 			w.Write([]byte("404 playlist not found"))
 			return
 		case <-time.After(playlistTimeout):

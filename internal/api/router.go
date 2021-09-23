@@ -21,11 +21,12 @@ func init() {
 	}
 }
 
-type ApiManagerCtx struct{}
+type ApiManagerCtx struct {
+	Conf *YamlConf
+}
 
 func New() *ApiManagerCtx {
-
-	return &ApiManagerCtx{}
+	return &ApiManagerCtx{Conf: conf}
 }
 
 func (a *ApiManagerCtx) Mount(r *chi.Mux) {
