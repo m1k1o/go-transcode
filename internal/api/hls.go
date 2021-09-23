@@ -86,6 +86,6 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 	r.Get("/{profile}/{input}/play.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		http.ServeFile(w, r, "/app/data/play.html")
+		http.ServeFile(w, r, "data/play.html")
 	})
 }

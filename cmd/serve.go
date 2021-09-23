@@ -4,7 +4,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 
-	"github.com/m1k1o/go-transcode"
+	"github.com/m1k1o/go-transcode/internal"
 	"github.com/m1k1o/go-transcode/internal/config"
 )
 

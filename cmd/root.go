@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/m1k1o/go-transcode"
+	"github.com/m1k1o/go-transcode/internal"
 )
 
 func Execute() error {

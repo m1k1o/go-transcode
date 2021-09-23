@@ -15,7 +15,7 @@ var conf *YamlConf
 
 func init() {
 	var err error
-	conf, err = loadConf("/app/streams.yaml")
+	conf, err = loadConf("streams.yaml")
 	if err != nil {
 		panic(err)
 	}
@@ -50,7 +50,7 @@ func transcodeStart(folder string, profile string, input string) (*exec.Cmd, err
 		return nil, fmt.Errorf("invalid profile path")
 	}
 
-	profilePath := fmt.Sprintf("/app/%s/%s.sh", folder, profile)
+	profilePath := fmt.Sprintf("%s/%s.sh", folder, profile)
 	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
 		return nil, err
 	}
