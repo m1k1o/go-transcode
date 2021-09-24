@@ -7,7 +7,7 @@ TIMEOUT=1
 go build
 
 # Test default settings (:8080)
-output="$(timeout --preserve-status $TIMEOUT ./go-transcode serve 2>&1 3>&1)"
+output="$(TRANSCODE_BIND= timeout --preserve-status $TIMEOUT ./go-transcode serve 2>&1 3>&1)"
 if echo "$output" | grep ":8080" > /dev/null; then
 	echo "Default settings work"
 else
