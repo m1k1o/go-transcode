@@ -44,7 +44,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 			// create new manager
 			manager = hls.New(func() *exec.Cmd {
 				// get transcode cmd
-				cmd, err := a.transcodeStart("profiles/hls", profile, input)
+				cmd, err := a.transcodeStart("hls", profile, input)
 				if err != nil {
 					logger.Error().Err(err).Msg("transcode could not be started")
 					w.WriteHeader(http.StatusInternalServerError)

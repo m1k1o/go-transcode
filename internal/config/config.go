@@ -39,6 +39,7 @@ type Server struct {
 	Proxy  bool
 	BaseDir string `yaml:"basedir",omitempty`
 	Streams map[string]string `yaml:"streams"`
+	Profiles string `yaml:"profiles",omitempty`
 }
 
 func (Server) Init(cmd *cobra.Command) error {
@@ -69,6 +70,8 @@ func (Server) Init(cmd *cobra.Command) error {
 
 	cmd.PersistentFlags().String("basedir", "", "The base directory for assets and profiles")
 
+	cmd.PersistentFlags().String("profiles", "default", "The hardware encoding profiles to load for ffmpeg (default, nvidia)")
+
 	return nil
 }
 
@@ -87,5 +90,7 @@ func (s *Server) Set() {
 			s.BaseDir = "/etc/transcode"
 		}
 	}
+	s.Profiles = viper.GetString("profiles")
+	if s.Profiles == "" { s.Profiles = "default" }
 	s.Streams = viper.GetStringMapString("streams")
 }
