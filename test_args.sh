@@ -4,7 +4,8 @@
 # Test fails after this timeout
 TIMEOUT=1
 
-go build
+# Fail if go build fails
+go build || exit 1
 
 # Test default settings (:8080)
 output="$(TRANSCODE_BIND= timeout --preserve-status $TIMEOUT ./go-transcode serve 2>&1 3>&1)"
