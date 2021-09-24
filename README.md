@@ -10,14 +10,17 @@ This feature is common in media centers (plex, jellyfin) but there was no simple
 
 ## Features
 
-- Sources
-  - [x] Live streams
-  - [ ] At-rest files (basic support)
-  - [x] Any codec/container supported by ffmpeg
-- Outputs
-  - [x] Basic MP4 over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]`
-  - [x] Basic HLS over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]/index.m3u8`
-  - [x] Demo HTML player : `http://go-transcode/[profile]/[stream-id]/play.html`
+Sources:
+- [x] Live streams
+- [ ] At-rest files (basic support)
+- [x] Any codec/container supported by ffmpeg
+
+Outputs:
+- [x] Basic MP4 over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]`
+- [x] Basic HLS over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]/index.m3u8`
+- [x] Demo HTML player : `http://go-transcode/[profile]/[stream-id]/play.html`
+
+Features:
 - [ ] Seeking (index)
 - [ ] Audio/Subtitles tracks
 - [ ] Private mode (serve users authenticated by reverse proxy)
@@ -50,12 +53,14 @@ go-transcode supports any formats that ffmpeg likes. We provide profiles out-of-
 
 We provide two different profiles directories:
 
-- profiles/ for CPU transcoding
-- profiles_nvidia/ for NVENC support (proprietary Nvidia driver)
+- profiles/default for CPU transcoding
+- profiles/nvidia for NVENC support (proprietary Nvidia driver)
 
 In these profile directories, actual profiles are located in hls/ and http/, depending on the output format requested.
 
 ## Docker
+
+TODO: outdated docker section
 
 ### Build
 
