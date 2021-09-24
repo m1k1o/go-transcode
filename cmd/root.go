@@ -74,7 +74,6 @@ func init() {
 		file := viper.ConfigFileUsed()
 		logger := log.With().
 			Bool("debug", viper.GetBool("debug")).
-			Str("logging", viper.GetString("logs")).
 			Str("config", file).
 			Logger()
 
