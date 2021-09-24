@@ -70,6 +70,7 @@ func (s *ServerCtx) Start() {
 			if err := s.http.ListenAndServeTLS(s.conf.Cert, s.conf.Key); err != http.ErrServerClosed {
 				s.logger.Panic().Err(err).Msg("unable to start https server")
 			}
+			s.logger.Warn().Msg("TLS support is provided for convenience, but you should never use it in production. Use a reverse proxy (apache nginx caddy) instead!")
 		}()
 		s.logger.Info().Msgf("https listening on %s", s.http.Addr)
 	} else {
