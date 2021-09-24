@@ -2,7 +2,7 @@
 
 go build || exit 1
 
-if [ ! -f $1 ]; then 
+if [ $# -lt 1 ] || [ ! -f $1 ]; then 
 	echo "Please give test video first argument"
 	exit 1
 fi
