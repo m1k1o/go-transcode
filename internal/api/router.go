@@ -13,21 +13,11 @@ import (
 	"github.com/m1k1o/go-transcode/internal/config"
 )
 
-var conf *config.YamlConf
-
-func init() {
-	var err error
-	conf, err = config.LoadConf("streams.yaml")
-	if err != nil {
-		panic(err)
-	}
-}
-
 type ApiManagerCtx struct {
-	Conf *config.YamlConf
+	Conf *config.Server
 }
 
-func New() *ApiManagerCtx {
+func New(conf *config.Server) *ApiManagerCtx {
 	return &ApiManagerCtx{Conf: conf}
 }
 
@@ -41,8 +31,8 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 	r.Group(a.Http)
 }
 
-func transcodeStart(folder string, profile string, input string) (*exec.Cmd, error) {
-	url, ok := conf.Streams[input]
+func (a *ApiManagerCtx) transcodeStart(folder string, profile string, input string) (*exec.Cmd, error) {
+	url, ok := a.Conf.Streams[input]
 	if !ok {
 		return nil, fmt.Errorf("stream not found")
 	}
@@ -52,7 +42,7 @@ func transcodeStart(folder string, profile string, input string) (*exec.Cmd, err
 		return nil, fmt.Errorf("invalid profile path")
 	}
 
-	profilePath := fmt.Sprintf("%s/%s/%s.sh", conf.BaseDir, folder, profile)
+	profilePath := fmt.Sprintf("%s/%s/%s.sh", a.Conf.BaseDir, folder, profile)
 	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
 		return nil, err
 	}

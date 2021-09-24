@@ -36,7 +36,7 @@ func (main *Main) Preflight() {
 }
 
 func (main *Main) Start() {
-	main.apiManager = api.New()
+	main.apiManager = api.New(main.ServerConfig)
 
 	main.server = http.New(
 		main.apiManager,

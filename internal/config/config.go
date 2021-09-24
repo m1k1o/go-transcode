@@ -1,44 +1,11 @@
 package config
 
 import (
-	"io/ioutil"
 	"os"
 
-	"gopkg.in/yaml.v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-type YamlConf struct {
-	BaseDir string `yaml:"basedir",omitempty`
-	Streams map[string]string `yaml:"streams"`
-}
-
-func LoadConf(path string) (*YamlConf, error) {
-	yamlFile, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	conf := &YamlConf{}
-	err = yaml.Unmarshal(yamlFile, conf)
-	if err != nil {
-		return nil, err
-	}
-
-	// If basedir is not explicit in config, try /etc/go-transcode/,
-	// fallback to the current working directory
-	if conf.BaseDir == "" {
-		if _, err := os.Stat("/etc/go-transcode"); os.IsNotExist(err) {
-			cwd, _ := os.Getwd()
-			conf.BaseDir = cwd
-		} else {
-			conf.BaseDir = "/etc/go-transcode"
-		}
-	}
-
-	return conf, nil
-}
 
 type Root struct {
 	Debug   bool
@@ -70,6 +37,8 @@ type Server struct {
 	Bind   string
 	Static string
 	Proxy  bool
+	BaseDir string `yaml:"basedir",omitempty`
+	Streams map[string]string `yaml:"streams"`
 }
 
 func (Server) Init(cmd *cobra.Command) error {
@@ -98,6 +67,15 @@ func (Server) Init(cmd *cobra.Command) error {
 		return err
 	}
 
+	var basedir_fallback string
+	if _, err := os.Stat("/etc/transcode"); os.IsNotExist(err) {
+		cwd, _ := os.Getwd()
+		basedir_fallback = cwd
+	} else {
+		basedir_fallback = "/etc/transcode"
+	}
+	cmd.PersistentFlags().String("basedir", basedir_fallback, "The base directory for assets and profiles")
+
 	return nil
 }
 
@@ -107,4 +85,8 @@ func (s *Server) Set() {
 	s.Bind = viper.GetString("bind")
 	s.Static = viper.GetString("static")
 	s.Proxy = viper.GetBool("proxy")
+	s.BaseDir = viper.GetString("basedir")
+	// TODO: potential serve /etc/transcode basedir
+	if s.BaseDir == "" { s.BaseDir = "." }
+	s.Streams = viper.GetStringMapString("streams")
 }

@@ -55,7 +55,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 			return
 		}
 
-		cmd, err := transcodeStart("profiles/http", profile, input)
+		cmd, err := a.transcodeStart("profiles/http", profile, input)
 		if err != nil {
 			logger.Warn().Err(err).Msg("transcode could not be started")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -90,7 +90,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		profile := chi.URLParam(r, "profile")
 		input := chi.URLParam(r, "input")
 
-		cmd, err := transcodeStart("profiles", profile, input)
+		cmd, err := a.transcodeStart("profiles", profile, input)
 		if err != nil {
 			logger.Warn().Err(err).Msg("transcode could not be started")
 			w.WriteHeader(http.StatusInternalServerError)

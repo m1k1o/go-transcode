@@ -54,10 +54,10 @@ type ManagerCtx struct {
 
 	playlistLoad chan string
 	shutdown     chan interface{}
-	Conf *config.YamlConf
+	Conf *config.Server
 }
 
-func New(cmdFactory func() *exec.Cmd, conf *config.YamlConf) *ManagerCtx {
+func New(cmdFactory func() *exec.Cmd, conf *config.Server) *ManagerCtx {
 	return &ManagerCtx{
 		Conf: conf,
 		logger:     log.With().Str("module", "hls").Str("submodule", "manager").Logger(),

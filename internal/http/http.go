@@ -28,6 +28,7 @@ func New(ApiManager types.ApiManager, conf *config.Server) *ServerCtx {
 	router := chi.NewRouter()
 	router.Use(middleware.Recoverer) // Recover from panics without crashing server
 	router.Use(middleware.RequestID) // Create a request ID for each request
+	// TODO: Why Logger not logger?
 	router.Use(Logger)               // Log API request calls using custom logger function
 
 	ApiManager.Mount(router)
@@ -52,6 +53,8 @@ func New(ApiManager types.ApiManager, conf *config.Server) *ServerCtx {
 		Addr:    conf.Bind,
 		Handler: router,
 	}
+
+	logger.Info().Msgf("Serving streams from basedir %v: %v", conf.BaseDir, conf.Streams)
 
 	return &ServerCtx{
 		logger: logger,
