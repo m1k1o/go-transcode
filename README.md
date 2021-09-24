@@ -1,53 +1,59 @@
-# Go live HTTP on-demand transcoding
-Transcoding is expensive and resource consuming operation on CPU and GPU. For big companies with thousands of customers it is essential, to have a dedicated 24/7 transcoding servers. But we, single sporadic users of transcoding, need to have different approach. Transcoding should be done only when its output is really needed. This tool is trying to solve this problem by offering transcoding on demand.
+# go-transcode HTTP on-demand transcoding API
 
-This tool is intended to be used with live streams only. Seeking is not supported, yet.
+## Why
+
+Transcoding is expensive and resource consuming operation on CPU and GPU. For big companies with thousands of customers it is essential, to have a dedicated 24/7 transcoding servers which can store all the transcoded versions.
+
+For the rest of us who don't have infinite resources and cannot have 3 times bigger media library because of transcoding, we should only transcode when it is needed. This tool is trying to solve this problem by offering transcoding on demand.
+
+This feature is common in media centers (plex, jellyfin) but there was no simple transcoding server without all other media center features. Now there is one! go-transcode is simple and extensible, and will probably not add features unrelated to transcoding.
+
+## Features
+
+- Sources
+  - [x] Live streams
+  - [ ] At-rest files (basic support)
+  - [x] Any codec/container supported by ffmpeg
+- Outputs
+  - [x] Basic MP4 over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]`
+  - [x] Basic HLS over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]/index.m3u8`
+  - [x] Demo HTML player : `http://go-transcode/[profile]/[stream-id]/play.html`
+- [ ] Seeking (index)
+- [ ] Audio/Subtitles tracks
+- [ ] Private mode (serve users authenticated by reverse proxy)
 
 ## Config
-Specify streams as object in yaml file.
 
-### Streams
-Create `streams.yaml` file, with your streams:
+Place your config file in `transcode.yml` (or `/etc/transcode/transcode.yml`). The streams are defined like this:
 
 ```yaml
 streams:
   <stream-id>: <stream-url>
 ```
 
-Example:
+Full configuration example:
+
 ```yaml
+debug: true # debug logs
+bind: localhost:8888 # IP/port to bind to
+static: # TODO: what is this?
+proxy: true # TODO: issue #4
 streams:
   cam: rtmp://localhost/live/cam
   ch1_hd: http://192.168.1.34:9981/stream/channelid/85
   ch2_hd: http://192.168.1.34:9981/stream/channelid/43
 ```
 
-HTTP streaming is accessible via:
-- `http://localhost:8080/<profile>/<stream-id>`
+## Transcoding profiles
 
-HLS is accessible via:
-- `http://localhost:8080/<profile>/<stream-id>/index.m3u8`
-- `http://localhost:8080/<profile>/<stream-id>/play.html`
+go-transcode supports any formats that ffmpeg likes. We provide profiles out-of-the-box for h264+aac (mp4 container) for 360p, 540p, 720p and 1080p resolutions: `h264_360p`, `h264_540p`, `h264_720p` and `h264_1080p`. Profiles can have any name, but must match regex: `^[0-9A-Za-z_-]+$`
 
-## CPU Profiles
-Profiles (HTTP and HLS) with CPU transcoding can be found in `profiles`:
+We provide two different profiles directories:
 
-* h264_360p
-* h264_540p
-* h264_720p
-* h264_1080p
+- profiles/ for CPU transcoding
+- profiles_nvidia/ for NVENC support (proprietary Nvidia driver)
 
-Profile names must match flowing regex: `^[0-9A-Za-z_-]+$`
-
-## GPU Profiles
-Profiles (HTTP and HLS) with GPU transcoding can be found in `profiles_nvidia`:
-
-* h264_360p
-* h264_540p
-* h264_720p
-* h264_1080p
-
-Profile names must match flowing regex: `^[0-9A-Za-z_-]+$`
+In these profile directories, actual profiles are located in hls/ and http/, depending on the output format requested.
 
 ## Docker
 
@@ -103,3 +109,34 @@ Input codec will be automatically determined from given stream. Please check you
 | vc1        | vc1_cuvid   | SMPTE VC-1                                |
 | vp8        | vp8_cuvid   | On2 VP8                                   |
 | vp9        | vp9_cuvid   | Google VP9                                |
+
+## Alternatives
+
+- [nginx-vod-module](https://github.com/kaltura/nginx-vod-module): only supports MP4 sources
+- [tvheadend](https://tvheadend.org/): intended for TV sources, not media library ; nvidia support hard to compile
+- [jellyfin](https://github.com/jellyfin/jellyfin): doesn't support live streams ; cannot run standalone transcoding service (without media library)
+- suggestions?
+
+## Contribute
+
+Join us in the [Matrix space](https://matrix.to/#/#go-transcode:proxychat.net) or [via XMPP bridge](xmpp:#go-transcode#proxychat.net@matrix.org).
+
+## Architecture
+
+The source code is in the following files/folders:
+
+- cmd/ and main.go : source for the command-line interface
+- internal/ : actual source code logic
+- hls/ : process runner for HLS transcoding
+
+TODO: document different modules/packages and dependencies
+
+Other files/folders in the repositories are:
+
+- data/ : files used/served by go-transcode
+- profiles/ and profiles_nvidia/ : the ffmpeg profiles for transcoding
+- dev/ : some docker helper scripts
+- tests/ : some tests for the project
+- god.mod and go.sum : golang dependencies/modules tracking
+- Dockerfile, Dockerfile.nvidia and docker-compose.yaml : for the docker lovers
+- LICENSE : licensing information (Apache 2.0)
