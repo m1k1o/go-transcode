@@ -8,6 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/fsnotify/fsnotify"
 
 	"github.com/m1k1o/go-transcode/internal"
 )
@@ -62,6 +63,13 @@ func init() {
 				log.Error().Err(err)
 			}
 		}
+
+		viper.OnConfigChange(func(e fsnotify.Event) {
+			// TODO: list config change
+			log.Logger.Info().Msg("Config file reloaded")
+			transcode.Service.ServerConfig.Set()
+		})
+		viper.WatchConfig()
 
 		file := viper.ConfigFileUsed()
 		logger := log.With().
