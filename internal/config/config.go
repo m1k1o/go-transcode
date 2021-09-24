@@ -9,11 +9,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-type Config interface {
-	Init(cmd *cobra.Command) error
-	Set()
-}
-
 type YamlConf struct {
 	BaseDir string `yaml:"basedir",omitempty`
 	Streams map[string]string `yaml:"streams"`
