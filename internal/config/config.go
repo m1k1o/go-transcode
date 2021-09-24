@@ -67,14 +67,7 @@ func (Server) Init(cmd *cobra.Command) error {
 		return err
 	}
 
-	var basedir_fallback string
-	if _, err := os.Stat("/etc/transcode"); os.IsNotExist(err) {
-		cwd, _ := os.Getwd()
-		basedir_fallback = cwd
-	} else {
-		basedir_fallback = "/etc/transcode"
-	}
-	cmd.PersistentFlags().String("basedir", basedir_fallback, "The base directory for assets and profiles")
+	cmd.PersistentFlags().String("basedir", "", "The base directory for assets and profiles")
 
 	return nil
 }
@@ -86,7 +79,13 @@ func (s *Server) Set() {
 	s.Static = viper.GetString("static")
 	s.Proxy = viper.GetBool("proxy")
 	s.BaseDir = viper.GetString("basedir")
-	// TODO: potential serve /etc/transcode basedir
-	if s.BaseDir == "" { s.BaseDir = "." }
+	if s.BaseDir == "" {
+		if _, err := os.Stat("/etc/transcode"); os.IsNotExist(err) {
+			cwd, _ := os.Getwd()
+			s.BaseDir = cwd
+		} else {
+			s.BaseDir = "/etc/transcode"
+		}
+	}
 	s.Streams = viper.GetStringMapString("streams")
 }
