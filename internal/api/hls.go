@@ -30,10 +30,10 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 			return
 		}
 
-		_, stream_exists := a.Conf.Streams[input]
-		if !stream_exists {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("404 not found"))
+		// check if stream exists
+		_, ok := a.Conf.Streams[input]
+		if !ok {
+			http.NotFound(w, r)
 			return
 		}
 
