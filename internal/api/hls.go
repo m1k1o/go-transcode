@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os/exec"
 	"path"
-	"regexp"
 
 	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
@@ -24,8 +23,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		profile := chi.URLParam(r, "profile")
 		input := chi.URLParam(r, "input")
 
-		re := regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
-		if !re.MatchString(profile) || !re.MatchString(input) {
+		if !resourceRegex.MatchString(profile) || !resourceRegex.MatchString(input) {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("400 invalid parameters"))
 			return
@@ -66,8 +64,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		input := chi.URLParam(r, "input")
 		file := chi.URLParam(r, "file")
 
-		re := regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
-		if !re.MatchString(profile) || !re.MatchString(input) || !re.MatchString(file) {
+		if !resourceRegex.MatchString(profile) || !resourceRegex.MatchString(input) || !resourceRegex.MatchString(file) {
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte("400 invalid parameters"))
 			return

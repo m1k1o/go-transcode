@@ -14,6 +14,8 @@ import (
 	"github.com/m1k1o/go-transcode/internal/config"
 )
 
+var resourceRegex = regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
+
 type ApiManagerCtx struct {
 	Conf *config.Server
 }
@@ -40,8 +42,7 @@ func (a *ApiManagerCtx) transcodeStart(folder string, profile string, input stri
 		return nil, fmt.Errorf("stream not found")
 	}
 
-	re := regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
-	if !re.MatchString(profile) {
+	if !resourceRegex.MatchString(profile) {
 		return nil, fmt.Errorf("invalid profile path")
 	}
 
