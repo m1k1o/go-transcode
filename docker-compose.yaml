@@ -8,5 +8,5 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./streams.yaml:/app/streams.yaml
+      - ./transcode.yaml:/app/transcode.yaml
     command: serve -d

@@ -68,8 +68,6 @@ In these profile directories, actual profiles are located in `hls/` and `http/`,
 
 ## Docker
 
-*TODO: outdated docker section*
-
 ### Build
 
 ```sh
@@ -82,7 +80,7 @@ docker build -t go-transcode:latest .
 docker run --rm -d \
   --name="go-transcode" \
   -p "8080:8080" \
-  -v "${PWD}/streams.yaml:/app/streams.yaml" go-transcode:latest
+  -v "${PWD}/transcode.yaml:/app/transcode.yaml" go-transcode:latest
 ```
 
 ## Nvidia GPU support (docker)
@@ -104,7 +102,7 @@ docker run --rm -d \
   --gpus=all \
   --name="go-transcode-nvidia" \
   -p "8080:8080" \
-  -v "${PWD}/streams.yaml:/app/streams.yaml" go-transcode-nvidia:latest
+  -v "${PWD}/transcode.yaml:/app/transcode.yaml" go-transcode-nvidia:latest
 ```
 
 ### Supported inputs
