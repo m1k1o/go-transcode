@@ -176,13 +176,12 @@ func (m *ManagerCtx) Stop() {
 			err := m.cmd.Process.Kill()
 			m.logger.Err(err).Msg("killing proccess")
 		}
+		m.cmd.Wait()
 		m.cmd = nil
 	}
 
-	time.AfterFunc(2*time.Second, func() {
-		err := os.RemoveAll(m.tempdir)
-		m.logger.Err(err).Msg("removing tempdir")
-	})
+	err := os.RemoveAll(m.tempdir)
+	m.logger.Err(err).Msg("removing tempdir")
 
 	if m.events.onStop != nil {
 		m.events.onStop()
