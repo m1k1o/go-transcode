@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path"
 	"regexp"
 
 	"github.com/go-chi/chi"
@@ -57,8 +58,9 @@ func (a *ApiManagerCtx) transcodeStart(folder string, profile string, input stri
 		return nil, fmt.Errorf("invalid profile path")
 	}
 
-	// [basedir]/profiles/[profiles]/hls,http/[profile].sh
-	profilePath := a.config.AbsPath("profiles", a.config.Profiles, folder, fmt.Sprintf("%s.sh", profile))
+	// [profiles]/hls,http/[profile].sh
+	// [profiles] defaults to [basedir]/profiles
+	profilePath := path.Join(a.config.Profiles, folder, fmt.Sprintf("%s.sh", profile))
 	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
 		return nil, err
 	}

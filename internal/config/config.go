@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -75,7 +76,7 @@ func (Server) Init(cmd *cobra.Command) error {
 		return err
 	}
 
-	cmd.PersistentFlags().String("profiles", "default", "hardware encoding profiles to load for ffmpeg (default, nvidia)")
+	cmd.PersistentFlags().String("profiles", "", "hardware encoding profiles to load for ffmpeg (default, nvidia)")
 	if err := viper.BindPFlag("profiles", cmd.PersistentFlags().Lookup("profiles")); err != nil {
 		return err
 	}
@@ -102,9 +103,9 @@ func (s *Server) Set() {
 
 	s.Profiles = viper.GetString("profiles")
 	if s.Profiles == "" {
-		s.Profiles = "default"
+		// TODO: issue #5
+		s.Profiles = fmt.Sprintf("%s/profiles", s.BaseDir)
 	}
-
 	s.Streams = viper.GetStringMapString("streams")
 }
 
