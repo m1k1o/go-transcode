@@ -36,13 +36,17 @@ func (main *Main) Preflight() {
 }
 
 func (main *Main) Start() {
-	main.apiManager = api.New(main.ServerConfig)
+	config := main.ServerConfig
+
+	main.apiManager = api.New(config)
 
 	main.server = http.New(
 		main.apiManager,
-		main.ServerConfig,
+		config,
 	)
 	main.server.Start()
+
+	main.logger.Info().Msgf("serving streams from basedir %s: %s", config.BaseDir, config.Streams)
 }
 
 func (main *Main) Shutdown() {

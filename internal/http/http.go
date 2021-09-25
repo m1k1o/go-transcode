@@ -17,12 +17,12 @@ import (
 
 type ServerCtx struct {
 	logger zerolog.Logger
+	config *config.Server
 	router *chi.Mux
 	http   *http.Server
-	conf   *config.Server
 }
 
-func New(ApiManager types.ApiManager, conf *config.Server) *ServerCtx {
+func New(ApiManager types.ApiManager, config *config.Server) *ServerCtx {
 	logger := log.With().Str("module", "http").Logger()
 
 	router := chi.NewRouter()
@@ -32,10 +32,11 @@ func New(ApiManager types.ApiManager, conf *config.Server) *ServerCtx {
 
 	ApiManager.Mount(router)
 
-	if conf.Static != "" {
-		fs := http.FileServer(http.Dir(conf.Static))
+	// serve static files
+	if config.Static != "" {
+		fs := http.FileServer(http.Dir(config.Static))
 		router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-			if _, err := os.Stat(conf.Static + r.RequestURI); os.IsNotExist(err) {
+			if _, err := os.Stat(config.Static + r.RequestURI); os.IsNotExist(err) {
 				http.StripPrefix(r.RequestURI, fs).ServeHTTP(w, r)
 			} else {
 				fs.ServeHTTP(w, r)
@@ -49,27 +50,25 @@ func New(ApiManager types.ApiManager, conf *config.Server) *ServerCtx {
 	})
 
 	http := &http.Server{
-		Addr:    conf.Bind,
+		Addr:    config.Bind,
 		Handler: router,
 	}
 
-	logger.Info().Msgf("Serving streams from basedir %v: %v", conf.BaseDir, conf.Streams)
-
 	return &ServerCtx{
 		logger: logger,
+		config: config,
 		router: router,
 		http:   http,
-		conf:   conf,
 	}
 }
 
 func (s *ServerCtx) Start() {
-	if s.conf.Cert != "" && s.conf.Key != "" {
+	if s.config.Cert != "" && s.config.Key != "" {
+		s.logger.Warn().Msg("TLS support is provided for convenience, but you should never use it in production. Use a reverse proxy (apache nginx caddy) instead!")
 		go func() {
-			if err := s.http.ListenAndServeTLS(s.conf.Cert, s.conf.Key); err != http.ErrServerClosed {
+			if err := s.http.ListenAndServeTLS(s.config.Cert, s.config.Key); err != http.ErrServerClosed {
 				s.logger.Panic().Err(err).Msg("unable to start https server")
 			}
-			s.logger.Warn().Msg("TLS support is provided for convenience, but you should never use it in production. Use a reverse proxy (apache nginx caddy) instead!")
 		}()
 		s.logger.Info().Msgf("https listening on %s", s.http.Addr)
 	} else {
