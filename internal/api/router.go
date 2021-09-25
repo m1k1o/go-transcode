@@ -26,6 +26,18 @@ func New(conf *config.Server) *ApiManagerCtx {
 	}
 }
 
+func (manager *ApiManagerCtx) Start() {
+}
+
+func (manager *ApiManagerCtx) Shutdown() error {
+	// close all hls managers
+	for _, hls := range hlsManagers {
+		hls.Stop()
+	}
+
+	return nil
+}
+
 func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 		//nolint
