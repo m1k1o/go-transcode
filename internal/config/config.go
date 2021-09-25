@@ -37,9 +37,10 @@ type Server struct {
 	Bind   string
 	Static string
 	Proxy  bool
-	BaseDir string `yaml:"basedir",omitempty`
-	Streams map[string]string `yaml:"streams"`
-	Profiles string `yaml:"profiles",omitempty`
+
+	BaseDir  string            `yaml:"basedir,omitempty"`
+	Streams  map[string]string `yaml:"streams"`
+	Profiles string            `yaml:"profiles,omitempty"`
 }
 
 func (Server) Init(cmd *cobra.Command) error {
@@ -68,9 +69,15 @@ func (Server) Init(cmd *cobra.Command) error {
 		return err
 	}
 
-	cmd.PersistentFlags().String("basedir", "", "The base directory for assets and profiles")
+	cmd.PersistentFlags().String("basedir", "", "base directory for assets and profiles")
+	if err := viper.BindPFlag("basedir", cmd.PersistentFlags().Lookup("basedir")); err != nil {
+		return err
+	}
 
-	cmd.PersistentFlags().String("profiles", "default", "The hardware encoding profiles to load for ffmpeg (default, nvidia)")
+	cmd.PersistentFlags().String("profiles", "default", "hardware encoding profiles to load for ffmpeg (default, nvidia)")
+	if err := viper.BindPFlag("profiles", cmd.PersistentFlags().Lookup("profiles")); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -81,6 +88,7 @@ func (s *Server) Set() {
 	s.Bind = viper.GetString("bind")
 	s.Static = viper.GetString("static")
 	s.Proxy = viper.GetBool("proxy")
+
 	s.BaseDir = viper.GetString("basedir")
 	if s.BaseDir == "" {
 		if _, err := os.Stat("/etc/transcode"); os.IsNotExist(err) {
@@ -90,7 +98,11 @@ func (s *Server) Set() {
 			s.BaseDir = "/etc/transcode"
 		}
 	}
+
 	s.Profiles = viper.GetString("profiles")
-	if s.Profiles == "" { s.Profiles = "default" }
+	if s.Profiles == "" {
+		s.Profiles = "default"
+	}
+
 	s.Streams = viper.GetStringMapString("streams")
 }
