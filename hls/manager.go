@@ -2,7 +2,6 @@ package hls
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -86,17 +85,12 @@ func (m *ManagerCtx) Start() error {
 
 	m.cmd = m.cmdFactory()
 	m.cmd.Dir = m.tempdir
-	//fmt.Println(m.cmd.Dir)
 
 	if m.events.onCmdLog != nil {
 		m.cmd.Stderr = utils.LogEvent(m.events.onCmdLog)
 	} else {
 		m.cmd.Stderr = utils.LogWriter(m.logger)
 	}
-
-	//cwd, _ := os.Getwd()
-	//m.cmd.Path = fmt.Sprintf("%s/%s", cwd, m.cmd.Path)
-	m.cmd.Path = fmt.Sprintf("%s/%s", m.Conf.BaseDir, m.cmd.Path)
 
 	read, write := io.Pipe()
 	m.cmd.Stdout = write
