@@ -12,7 +12,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/m1k1o/go-transcode/internal/config"
-	"github.com/m1k1o/go-transcode/internal/types"
 )
 
 type ServerCtx struct {
@@ -22,15 +21,13 @@ type ServerCtx struct {
 	http   *http.Server
 }
 
-func New(ApiManager types.ApiManager, config *config.Server) *ServerCtx {
+func New(config *config.Server) *ServerCtx {
 	logger := log.With().Str("module", "http").Logger()
 
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID) // Create a request ID for each request
 	router.Use(middleware.RequestLogger(&logformatter{logger}))
 	router.Use(middleware.Recoverer) // Recover from panics without crashing server
-
-	ApiManager.Mount(router)
 
 	// serve static files
 	if config.Static != "" {
@@ -49,16 +46,14 @@ func New(ApiManager types.ApiManager, config *config.Server) *ServerCtx {
 		w.Write([]byte("404"))
 	})
 
-	http := &http.Server{
-		Addr:    config.Bind,
-		Handler: router,
-	}
-
 	return &ServerCtx{
 		logger: logger,
 		config: config,
 		router: router,
-		http:   http,
+		http: &http.Server{
+			Addr:    config.Bind,
+			Handler: router,
+		},
 	}
 }
 
@@ -86,4 +81,8 @@ func (s *ServerCtx) Shutdown() error {
 	defer cancel()
 
 	return s.http.Shutdown(ctx)
+}
+
+func (s *ServerCtx) Mount(fn func(r *chi.Mux)) {
+	fn(s.router)
 }

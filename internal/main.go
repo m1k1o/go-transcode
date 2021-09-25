@@ -39,22 +39,23 @@ func (main *Main) Start() {
 	config := main.ServerConfig
 
 	main.apiManager = api.New(config)
+	main.apiManager.Start()
 
-	main.server = http.New(
-		main.apiManager,
-		config,
-	)
+	main.server = http.New(config)
+	main.server.Mount(main.apiManager.Mount)
 	main.server.Start()
 
 	main.logger.Info().Msgf("serving streams from basedir %s: %s", config.BaseDir, config.Streams)
 }
 
 func (main *Main) Shutdown() {
-	if err := main.server.Shutdown(); err != nil {
-		main.logger.Err(err).Msg("server shutdown with an error")
-	} else {
-		main.logger.Debug().Msg("server shutdown")
-	}
+	var err error
+
+	err = main.server.Shutdown()
+	main.logger.Err(err).Msg("server shutdown")
+
+	err = main.apiManager.Shutdown()
+	main.logger.Err(err).Msg("api shutdown")
 }
 
 func (main *Main) ServeCommand(cmd *cobra.Command, args []string) {
