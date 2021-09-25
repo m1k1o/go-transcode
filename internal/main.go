@@ -28,7 +28,7 @@ type Main struct {
 
 	logger      zerolog.Logger
 	apiManager  *api.ApiManagerCtx
-	httpManager *http.HttpCtx
+	httpManager *http.HttpManagerCtx
 }
 
 func (main *Main) Preflight() {

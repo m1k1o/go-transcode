@@ -14,14 +14,14 @@ import (
 	"github.com/m1k1o/go-transcode/internal/config"
 )
 
-type HttpCtx struct {
+type HttpManagerCtx struct {
 	logger zerolog.Logger
 	config *config.Server
 	router *chi.Mux
 	http   *http.Server
 }
 
-func New(config *config.Server) *HttpCtx {
+func New(config *config.Server) *HttpManagerCtx {
 	logger := log.With().Str("module", "http").Logger()
 
 	router := chi.NewRouter()
@@ -46,7 +46,7 @@ func New(config *config.Server) *HttpCtx {
 		w.Write([]byte("404"))
 	})
 
-	return &HttpCtx{
+	return &HttpManagerCtx{
 		logger: logger,
 		config: config,
 		router: router,
@@ -57,7 +57,7 @@ func New(config *config.Server) *HttpCtx {
 	}
 }
 
-func (s *HttpCtx) Start() {
+func (s *HttpManagerCtx) Start() {
 	if s.config.Cert != "" && s.config.Key != "" {
 		s.logger.Warn().Msg("TLS support is provided for convenience, but you should never use it in production. Use a reverse proxy (apache nginx caddy) instead!")
 		go func() {
@@ -76,13 +76,13 @@ func (s *HttpCtx) Start() {
 	}
 }
 
-func (s *HttpCtx) Shutdown() error {
+func (s *HttpManagerCtx) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	return s.http.Shutdown(ctx)
 }
 
-func (s *HttpCtx) Mount(fn func(r *chi.Mux)) {
+func (s *HttpManagerCtx) Mount(fn func(r *chi.Mux)) {
 	fn(s.router)
 }
