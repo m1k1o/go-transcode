@@ -66,7 +66,7 @@ func (main *Main) ServeCommand(cmd *cobra.Command, args []string) {
 	signal.Notify(quit, os.Interrupt)
 	sig := <-quit
 
-	main.logger.Warn().Msgf("received %s, attempting graceful shutdown: \n", sig)
+	main.logger.Warn().Msgf("received %s, attempting graceful shutdown", sig)
 	main.Shutdown()
 	main.logger.Info().Msg("shutdown complete")
 }
