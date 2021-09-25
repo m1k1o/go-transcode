@@ -124,7 +124,7 @@ Input codec will be automatically determined from given stream. Please check you
 
 ## Contribute
 
-Join us in the [Matrix space](https://matrix.to/#/#go-transcode:proxychat.net) or [via XMPP bridge](xmpp:#go-transcode#proxychat.net@matrix.org).
+Join us in the [Matrix space](https://matrix.to/#/#go-transcode:proxychat.net) (or the [#go-transcode-general](https://matrix.to/#/#go-transcode-general:proxychat.net) room directly) or [via XMPP bridge](xmpp:#go-transcode-general#proxychat.net@matrix.org).
 
 ## Architecture
 
