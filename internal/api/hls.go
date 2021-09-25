@@ -52,7 +52,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 				}
 
 				return cmd
-			}, a.Conf)
+			})
 
 			hlsManagers[ID] = manager
 		}
