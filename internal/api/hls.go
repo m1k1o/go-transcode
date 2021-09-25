@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
+	"path"
 	"regexp"
 
 	"github.com/go-chi/chi"
@@ -86,6 +87,6 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 	r.Get("/{profile}/{input}/play.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		http.ServeFile(w, r, fmt.Sprintf("%s/%s", a.Conf.BaseDir, "data/play.html"))
+		http.ServeFile(w, r, path.Join(a.Conf.BaseDir, "data/play.html"))
 	})
 }
