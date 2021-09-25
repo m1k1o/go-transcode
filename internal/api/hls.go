@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os/exec"
-	"path"
 
 	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
@@ -30,7 +29,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		}
 
 		// check if stream exists
-		_, ok := a.Conf.Streams[input]
+		_, ok := a.config.Streams[input]
 		if !ok {
 			http.NotFound(w, r)
 			return
@@ -84,6 +83,8 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 	r.Get("/{profile}/{input}/play.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		http.ServeFile(w, r, path.Join(a.Conf.BaseDir, "data/play.html"))
+
+		file := a.config.AbsPath("data", "play.html")
+		http.ServeFile(w, r, file)
 	})
 }

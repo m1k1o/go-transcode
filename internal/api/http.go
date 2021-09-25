@@ -5,7 +5,6 @@ import (
 	"io"
 	"net/http"
 	"os/exec"
-	"path"
 
 	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
@@ -22,7 +21,8 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 			Logger()
 
 		// dummy input for testing purposes
-		cmd := exec.Command(path.Join(a.Conf.BaseDir, "data/http-test.sh"))
+		file := a.config.AbsPath("data", "http-test.sh")
+		cmd := exec.Command(file)
 		logger.Info().Msg("command startred")
 
 		read, write := io.Pipe()
@@ -50,7 +50,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		input := chi.URLParam(r, "input")
 
 		// check if stream exists
-		_, ok := a.Conf.Streams[input]
+		_, ok := a.config.Streams[input]
 		if !ok {
 			http.NotFound(w, r)
 			return
@@ -93,7 +93,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		input := chi.URLParam(r, "input")
 
 		// check if stream exists
-		_, ok := a.Conf.Streams[input]
+		_, ok := a.config.Streams[input]
 		if !ok {
 			http.NotFound(w, r)
 			return

@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	"path"
 	"regexp"
 
 	"github.com/go-chi/chi"
@@ -17,12 +16,12 @@ import (
 var resourceRegex = regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
 
 type ApiManagerCtx struct {
-	Conf *config.Server
+	config *config.Server
 }
 
-func New(conf *config.Server) *ApiManagerCtx {
+func New(config *config.Server) *ApiManagerCtx {
 	return &ApiManagerCtx{
-		Conf: conf,
+		config: config,
 	}
 }
 
@@ -49,7 +48,7 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 }
 
 func (a *ApiManagerCtx) transcodeStart(folder string, profile string, input string) (*exec.Cmd, error) {
-	url, ok := a.Conf.Streams[input]
+	url, ok := a.config.Streams[input]
 	if !ok {
 		return nil, fmt.Errorf("stream not found")
 	}
@@ -59,7 +58,7 @@ func (a *ApiManagerCtx) transcodeStart(folder string, profile string, input stri
 	}
 
 	// [basedir]/profiles/[profiles]/hls,http/[profile].sh
-	profilePath := path.Join(a.Conf.BaseDir, "profiles", a.Conf.Profiles, folder, fmt.Sprintf("%s.sh", profile))
+	profilePath := a.config.AbsPath("profiles", a.config.Profiles, folder, fmt.Sprintf("%s.sh", profile))
 	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
 		return nil, err
 	}

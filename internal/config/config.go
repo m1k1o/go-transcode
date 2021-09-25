@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"path"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -105,4 +106,10 @@ func (s *Server) Set() {
 	}
 
 	s.Streams = viper.GetStringMapString("streams")
+}
+
+func (s *Server) AbsPath(elem ...string) string {
+	// prepend base path
+	elem = append([]string{s.BaseDir}, elem...)
+	return path.Join(elem...)
 }
