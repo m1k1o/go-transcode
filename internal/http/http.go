@@ -26,10 +26,9 @@ func New(ApiManager types.ApiManager, conf *config.Server) *ServerCtx {
 	logger := log.With().Str("module", "http").Logger()
 
 	router := chi.NewRouter()
-	router.Use(middleware.Recoverer) // Recover from panics without crashing server
 	router.Use(middleware.RequestID) // Create a request ID for each request
-	// TODO: Why Logger not logger?
-	router.Use(Logger)               // Log API request calls using custom logger function
+	router.Use(middleware.RequestLogger(&logformatter{logger}))
+	router.Use(middleware.Recoverer) // Recover from panics without crashing server
 
 	ApiManager.Mount(router)
 
