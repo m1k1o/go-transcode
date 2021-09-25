@@ -6,4 +6,5 @@ docker run --rm -it \
     -p "3005:8080" \
     -v "${PWD}/../:/app" \
     --entrypoint="/bin/bash" \
-    transcode_server_img -c '/app/build && ./bin/transcode serve --bind :8080';
+    --workdir="/app" \
+    transcode_server_img -c 'go build && ./go-transcode serve --bind :8080';

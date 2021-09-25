@@ -1,4 +1,0 @@
-#!/bin/sh
-
-#go build -o bin/transcode cmd/transcode/main.go
-go build

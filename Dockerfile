@@ -17,9 +17,9 @@ RUN set -eux; apt update; \
 COPY . .
 
 RUN go get -v -t -d .; \
-    ./build
+    go build -o bin/go-transcode
 
 ENV TRANSCODE_BIND=:8080
 
-ENTRYPOINT [ "bin/transcode" ]
+ENTRYPOINT [ "bin/go-transcode" ]
 CMD [ "serve" ]
