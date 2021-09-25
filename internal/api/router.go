@@ -19,7 +19,9 @@ type ApiManagerCtx struct {
 }
 
 func New(conf *config.Server) *ApiManagerCtx {
-	return &ApiManagerCtx{Conf: conf}
+	return &ApiManagerCtx{
+		Conf: conf,
+	}
 }
 
 func (a *ApiManagerCtx) Mount(r *chi.Mux) {

@@ -21,9 +21,9 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 			Str("module", "ffmpeg").
 			Logger()
 
-		logger.Info().Msg("command startred")
-		// WTF is this for?
+		// dummy input for testing purposes
 		cmd := exec.Command(path.Join(a.Conf.BaseDir, "data/http-test.sh"))
+		logger.Info().Msg("command startred")
 
 		read, write := io.Pipe()
 		cmd.Stdout = write
@@ -49,10 +49,10 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		profile := chi.URLParam(r, "profile")
 		input := chi.URLParam(r, "input")
 
-		_, stream_exists := a.Conf.Streams[input]
-		if !stream_exists {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("404 not found"))
+		// check if stream exists
+		_, ok := a.Conf.Streams[input]
+		if !ok {
+			http.NotFound(w, r)
 			return
 		}
 
@@ -82,6 +82,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		io.Copy(w, read)
 	})
 
+	// buffered http streaming (alternative to prervious type)
 	r.Get("/{profile}/{input}/buf", func(w http.ResponseWriter, r *http.Request) {
 		logger := log.With().
 			Str("path", r.URL.Path).
@@ -91,8 +92,14 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		profile := chi.URLParam(r, "profile")
 		input := chi.URLParam(r, "input")
 
-		// TODO: what is this? why no http/hls?
-		cmd, err := a.transcodeStart("profiles", profile, input)
+		// check if stream exists
+		_, ok := a.Conf.Streams[input]
+		if !ok {
+			http.NotFound(w, r)
+			return
+		}
+
+		cmd, err := a.transcodeStart("http", profile, input)
 		if err != nil {
 			logger.Warn().Err(err).Msg("transcode could not be started")
 			w.WriteHeader(http.StatusInternalServerError)
