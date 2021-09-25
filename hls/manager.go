@@ -15,7 +15,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/m1k1o/go-transcode/internal/utils"
-	"github.com/m1k1o/go-transcode/internal/config"
 )
 
 // how often should be cleanup called
@@ -53,12 +52,10 @@ type ManagerCtx struct {
 
 	playlistLoad chan string
 	shutdown     chan interface{}
-	Conf *config.Server
 }
 
-func New(cmdFactory func() *exec.Cmd, conf *config.Server) *ManagerCtx {
+func New(cmdFactory func() *exec.Cmd) *ManagerCtx {
 	return &ManagerCtx{
-		Conf: conf,
 		logger:     log.With().Str("module", "hls").Str("submodule", "manager").Logger(),
 		cmdFactory: cmdFactory,
 
