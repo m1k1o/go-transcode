@@ -12,22 +12,22 @@ This feature is common in media centers (plex, jellyfin) but there was no simple
 
 Sources:
 - [x] Live streams
-- [ ] At-rest files (basic support)
+- [ ] Static files (basic support)
 - [x] Any codec/container supported by ffmpeg
 
 Outputs:
 - [x] Basic MP4 over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]`
 - [x] Basic HLS over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]/index.m3u8`
-- [x] Demo HTML player : `http://go-transcode/[profile]/[stream-id]/play.html`
+- [x] Demo HTML player (for HLS) : `http://go-transcode/[profile]/[stream-id]/play.html`
 
 Features:
-- [ ] Seeking (index)
+- [ ] Seeking for static files (index)
 - [ ] Audio/Subtitles tracks
 - [ ] Private mode (serve users authenticated by reverse proxy)
 
 ## Config
 
-Place your config file in `transcode.yml` (or `/etc/transcode/transcode.yml`). The streams are defined like this:
+Place your config file in `./transcode.yml` (or `/etc/transcode/transcode.yml`). The streams are defined like this:
 
 ```yaml
 streams:
@@ -37,10 +37,18 @@ streams:
 Full configuration example:
 
 ```yaml
-debug: true # debug logs
-bind: localhost:8888 # IP/port to bind to
-static: # TODO: what is this?
-proxy: true # TODO: issue #4
+# allow debug outputs
+debug: true
+
+# bind server to IP:PORT (use :8888 for all connections)
+bind: localhost:8888
+
+# serve static files from this directory (optional)
+static: /var/www/html
+
+# TODO: issue #4
+proxy: true
+
 streams:
   cam: rtmp://localhost/live/cam
   ch1_hd: http://192.168.1.34:9981/stream/channelid/85
@@ -56,11 +64,11 @@ We provide two different profiles directories:
 - profiles/default for CPU transcoding
 - profiles/nvidia for NVENC support (proprietary Nvidia driver)
 
-In these profile directories, actual profiles are located in hls/ and http/, depending on the output format requested.
+In these profile directories, actual profiles are located in `hls/` and `http/`, depending on the output format requested.
 
 ## Docker
 
-TODO: outdated docker section
+*TODO: outdated docker section*
 
 ### Build
 
@@ -117,10 +125,10 @@ Input codec will be automatically determined from given stream. Please check you
 
 ## Alternatives
 
-- [nginx-vod-module](https://github.com/kaltura/nginx-vod-module): only supports MP4 sources
-- [tvheadend](https://tvheadend.org/): intended for TV sources, not media library ; nvidia support hard to compile
-- [jellyfin](https://github.com/jellyfin/jellyfin): doesn't support live streams ; cannot run standalone transcoding service (without media library)
-- suggestions?
+- [nginx-vod-module](https://github.com/kaltura/nginx-vod-module): Only supports MP4 sources.
+- [tvheadend](https://tvheadend.org/): Intended for various live sources (IPTV or DVB), not media library - although it can record TV. Supports Nvidia acceleration, but it is hard to compile.
+- [jellyfin](https://github.com/jellyfin/jellyfin): Supports live TV sources, although does not work realiably. Cannot run standalone transcoding service (without media library).
+- Any suggestions?
 
 ## Contribute
 
@@ -130,18 +138,18 @@ Join us in the [Matrix space](https://matrix.to/#/#go-transcode:proxychat.net) (
 
 The source code is in the following files/folders:
 
-- cmd/ and main.go : source for the command-line interface
-- internal/ : actual source code logic
-- hls/ : process runner for HLS transcoding
+- `cmd/` and `main.go`: source for the command-line interface
+- `internal/`: actual source code logic
+- `hls/`: process runner for HLS transcoding
 
-TODO: document different modules/packages and dependencies
+*TODO: document different modules/packages and dependencies*
 
 Other files/folders in the repositories are:
 
-- data/ : files used/served by go-transcode
-- profiles/ and profiles_nvidia/ : the ffmpeg profiles for transcoding
-- dev/ : some docker helper scripts
-- tests/ : some tests for the project
-- god.mod and go.sum : golang dependencies/modules tracking
-- Dockerfile, Dockerfile.nvidia and docker-compose.yaml : for the docker lovers
-- LICENSE : licensing information (Apache 2.0)
+- `data/`: files used/served by go-transcode
+- `profiles/ and profiles_nvidia/`: the ffmpeg profiles for transcoding
+- `dev/`: some docker helper scripts
+- `tests/`: some tests for the project
+- `god.mod` and `go.sum`: golang dependencies/modules tracking
+- `Dockerfile`, `Dockerfile.nvidia` and `docker-compose.yaml`: for the docker lovers
+- `LICENSE`: licensing information (Apache 2.0)
