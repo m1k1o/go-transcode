@@ -71,3 +71,7 @@ func (main *Main) ServeCommand(cmd *cobra.Command, args []string) {
 	main.Shutdown()
 	main.logger.Info().Msg("shutdown complete")
 }
+
+func (main *Main) ConfigReload() {
+	// TODO: Implement.
+}

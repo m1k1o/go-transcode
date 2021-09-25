@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/m1k1o/go-transcode/internal"
+	transcode "github.com/m1k1o/go-transcode/internal"
 )
 
 func Execute() error {
@@ -25,24 +25,26 @@ var root = &cobra.Command{
 
 func init() {
 	cobra.OnInitialize(func() {
+		config := transcode.Service.RootConfig
+		config.Set()
+
 		//////
 		// logs
 		//////
-		zerolog.TimeFieldFormat = ""
-		zerolog.SetGlobalLevel(zerolog.InfoLevel)
-
-		if viper.GetBool("debug") {
-			zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		}
-
+		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
+
+		if config.Debug {
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		} else {
+			zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		}
 
 		//////
 		// configs
 		//////
-		config := viper.GetString("config")
-		if config != "" {
-			viper.SetConfigFile(config) // Use config file from the flag.
+		if config.CfgFile != "" {
+			viper.SetConfigFile(config.CfgFile) // use config file from the flag
 		} else {
 			if runtime.GOOS == "linux" {
 				viper.AddConfigPath("/etc/transcode/")
@@ -55,35 +57,27 @@ func init() {
 		viper.SetEnvPrefix("transcode")
 		viper.AutomaticEnv() // read in environment variables that match
 
-		if err := viper.ReadInConfig(); err != nil {
-			if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-				log.Error().Err(err)
-			}
-			if config != "" {
-				log.Error().Err(err)
-			}
+		err := viper.ReadInConfig()
+		if err != nil && config.CfgFile != "" {
+			log.Err(err)
 		}
 
-		viper.OnConfigChange(func(e fsnotify.Event) {
-			// TODO: list config change
-			log.Logger.Info().Msg("Config file reloaded")
-			transcode.Service.ServerConfig.Set()
-		})
-		viper.WatchConfig()
-
-		file := viper.ConfigFileUsed()
 		logger := log.With().
-			Bool("debug", viper.GetBool("debug")).
-			Str("config", file).
+			Bool("debug", config.Debug).
 			Logger()
 
-		if file == "" {
-			logger.Warn().Msg("preflight complete without config file")
-		} else {
-			logger.Info().Msg("preflight complete")
-		}
+		file := viper.ConfigFileUsed()
+		if file != "" {
+			viper.OnConfigChange(func(e fsnotify.Event) {
+				log.Info().Msg("config file reloaded")
+				transcode.Service.ConfigReload()
+			})
 
-		transcode.Service.RootConfig.Set()
+			viper.WatchConfig()
+			logger.Info().Str("config", file).Msg("preflight complete with config file")
+		} else {
+			logger.Warn().Msg("preflight complete without config file")
+		}
 	})
 
 	if err := transcode.Service.RootConfig.Init(root); err != nil {
