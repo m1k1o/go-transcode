@@ -20,7 +20,7 @@ func init() {
 		transcode.Service.Preflight()
 	})
 
-	if err := transcode.Service.ServerConfig.Init(command); err !=nil {
+	if err := transcode.Service.ServerConfig.Init(command); err != nil {
 		log.Panic().Err(err).Msg("unable to run serve command")
 	}
 

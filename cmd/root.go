@@ -4,11 +4,11 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/fsnotify/fsnotify"
 
 	"github.com/m1k1o/go-transcode/internal"
 )
