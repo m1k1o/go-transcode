@@ -59,12 +59,7 @@ streams:
 
 go-transcode supports any formats that ffmpeg likes. We provide profiles out-of-the-box for h264+aac (mp4 container) for 360p, 540p, 720p and 1080p resolutions: `h264_360p`, `h264_540p`, `h264_720p` and `h264_1080p`. Profiles can have any name, but must match regex: `^[0-9A-Za-z_-]+$`
 
-We provide two different profiles directories:
-
-- profiles/default for CPU transcoding
-- profiles/nvidia for NVENC support (proprietary Nvidia driver)
-
-In these profile directories, actual profiles are located in `hls/` and `http/`, depending on the output format requested.
+In these profile directories, actual profiles are located in `hls/` and `http/`, depending on the output format requested. The profiles scripts detect hardware support by running ffmpeg. No special config needed to use hardware acceleration.
 
 ## Docker
 
