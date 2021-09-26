@@ -1,10 +1,10 @@
 package api
 
 import (
+	_ "embed"
 	"fmt"
 	"net/http"
 	"os/exec"
-	"regexp"
 
 	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
@@ -13,6 +13,9 @@ import (
 )
 
 var hlsManagers map[string]hls.Manager = make(map[string]hls.Manager)
+
+//go:embed play.html
+var playHTML string
 
 func (a *ApiManagerCtx) HLS(r chi.Router) {
 	r.Get("/{profile}/{input}/index.m3u8", func(w http.ResponseWriter, r *http.Request) {
@@ -23,10 +26,23 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		profile := chi.URLParam(r, "profile")
 		input := chi.URLParam(r, "input")
 
-		re := regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
-		if !re.MatchString(profile) || !re.MatchString(input) {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("400 invalid parameters"))
+		if !resourceRegex.MatchString(profile) || !resourceRegex.MatchString(input) {
+			http.Error(w, "400 invalid parameters", http.StatusBadRequest)
+			return
+		}
+
+		// check if stream exists
+		_, ok := a.config.Streams[input]
+		if !ok {
+			http.Error(w, "404 stream not found", http.StatusNotFound)
+			return
+		}
+
+		// check if profile exists
+		profilePath, err := a.ProfilePath("hls", profile)
+		if err != nil {
+			logger.Warn().Err(err).Msg("profile path could not be found")
+			http.Error(w, "404 profile not found", http.StatusNotFound)
 			return
 		}
 
@@ -37,9 +53,9 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 			// create new manager
 			manager = hls.New(func() *exec.Cmd {
 				// get transcode cmd
-				cmd, err := transcodeStart("profiles/hls", profile, input)
+				cmd, err := a.transcodeStart(profilePath, input)
 				if err != nil {
-					logger.Panic().Err(err).Msg("transcode could not be started")
+					logger.Error().Err(err).Msg("transcode could not be started")
 				}
 
 				return cmd
@@ -56,10 +72,8 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		input := chi.URLParam(r, "input")
 		file := chi.URLParam(r, "file")
 
-		re := regexp.MustCompile(`^[0-9A-Za-z_-]+$`)
-		if !re.MatchString(profile) || !re.MatchString(input) || !re.MatchString(file) {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("400 invalid parameters"))
+		if !resourceRegex.MatchString(profile) || !resourceRegex.MatchString(input) || !resourceRegex.MatchString(file) {
+			http.Error(w, "400 invalid parameters", http.StatusBadRequest)
 			return
 		}
 
@@ -67,8 +81,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 		manager, ok := hlsManagers[ID]
 		if !ok {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("404 transcode not found"))
+			http.Error(w, "404 transcode not found", http.StatusNotFound)
 			return
 		}
 
@@ -77,6 +90,6 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 	r.Get("/{profile}/{input}/play.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		http.ServeFile(w, r, "/app/data/play.html")
+		_, _ = w.Write([]byte(playHTML))
 	})
 }

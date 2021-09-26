@@ -21,7 +21,7 @@ import (
 const cleanupPeriod = 4 * time.Second
 
 // timeot for first playlist, when it waits for new data
-const playlistTimeout = 20 * time.Second
+const playlistTimeout = 60 * time.Second
 
 // minimum segments available to consider stream as active
 const hlsMinimumSegments = 2
@@ -126,6 +126,7 @@ func (m *ManagerCtx) Start() error {
 			}
 
 			if err != nil {
+				// When command fails to start, we reach this branch after a while
 				m.logger.Err(err).Msg("cmd read failed")
 				return
 			}
@@ -175,13 +176,12 @@ func (m *ManagerCtx) Stop() {
 			err := m.cmd.Process.Kill()
 			m.logger.Err(err).Msg("killing proccess")
 		}
+		_ = m.cmd.Wait()
 		m.cmd = nil
 	}
 
-	time.AfterFunc(2*time.Second, func() {
-		err := os.RemoveAll(m.tempdir)
-		m.logger.Err(err).Msg("removing tempdir")
-	})
+	err := os.RemoveAll(m.tempdir)
+	m.logger.Err(err).Msg("removing tempdir")
 
 	if m.events.onStop != nil {
 		m.events.onStop()
@@ -217,8 +217,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		err := m.Start()
 		if err != nil {
 			m.logger.Warn().Err(err).Msg("transcode could not be started")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+			http.Error(w, "500 not available", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -228,20 +227,19 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		case playlist = <-m.playlistLoad:
 		case <-m.shutdown:
 			m.logger.Warn().Msg("playlist load failed because of shutdown")
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("404 playlist not found"))
+			// When command failed to start and timeout has been increased we reach this branch after a while
+			http.Error(w, "404 playlist not found", http.StatusNotFound)
 			return
 		case <-time.After(playlistTimeout):
 			m.logger.Warn().Msg("playlist load channel timeouted")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("500 not available"))
+			http.Error(w, "500 not available", http.StatusInternalServerError)
 			return
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 	w.Header().Set("Cache-Control", "no-cache")
-	w.Write([]byte(playlist))
+	_, _ = w.Write([]byte(playlist))
 }
 
 func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
@@ -250,8 +248,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		m.logger.Warn().Str("path", path).Msg("media file not found")
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("404 media not found"))
+		http.Error(w, "404 media not found", http.StatusNotFound)
 		return
 	}
 

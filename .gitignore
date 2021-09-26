@@ -1,2 +1,5 @@
-bin/
-streams.yaml
+config.yml
+config.yaml
+go-transcode
+bin
+.env

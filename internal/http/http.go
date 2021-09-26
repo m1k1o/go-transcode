@@ -12,30 +12,28 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/m1k1o/go-transcode/internal/config"
-	"github.com/m1k1o/go-transcode/internal/types"
 )
 
-type ServerCtx struct {
+type HttpManagerCtx struct {
 	logger zerolog.Logger
+	config *config.Server
 	router *chi.Mux
 	http   *http.Server
-	conf   *config.Server
 }
 
-func New(ApiManager types.ApiManager, conf *config.Server) *ServerCtx {
+func New(config *config.Server) *HttpManagerCtx {
 	logger := log.With().Str("module", "http").Logger()
 
 	router := chi.NewRouter()
-	router.Use(middleware.Recoverer) // Recover from panics without crashing server
 	router.Use(middleware.RequestID) // Create a request ID for each request
-	router.Use(Logger)               // Log API request calls using custom logger function
+	router.Use(middleware.RequestLogger(&logformatter{logger}))
+	router.Use(middleware.Recoverer) // Recover from panics without crashing server
 
-	ApiManager.Mount(router)
-
-	if conf.Static != "" {
-		fs := http.FileServer(http.Dir(conf.Static))
+	// serve static files
+	if config.Static != "" {
+		fs := http.FileServer(http.Dir(config.Static))
 		router.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-			if _, err := os.Stat(conf.Static + r.RequestURI); os.IsNotExist(err) {
+			if _, err := os.Stat(config.Static + r.RequestURI); os.IsNotExist(err) {
 				http.StripPrefix(r.RequestURI, fs).ServeHTTP(w, r)
 			} else {
 				fs.ServeHTTP(w, r)
@@ -45,26 +43,25 @@ func New(ApiManager types.ApiManager, conf *config.Server) *ServerCtx {
 
 	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
 		//nolint
-		w.Write([]byte("404"))
+		_, _ = w.Write([]byte("404"))
 	})
 
-	http := &http.Server{
-		Addr:    conf.Bind,
-		Handler: router,
-	}
-
-	return &ServerCtx{
+	return &HttpManagerCtx{
 		logger: logger,
+		config: config,
 		router: router,
-		http:   http,
-		conf:   conf,
+		http: &http.Server{
+			Addr:    config.Bind,
+			Handler: router,
+		},
 	}
 }
 
-func (s *ServerCtx) Start() {
-	if s.conf.Cert != "" && s.conf.Key != "" {
+func (s *HttpManagerCtx) Start() {
+	if s.config.Cert != "" && s.config.Key != "" {
+		s.logger.Warn().Msg("TLS support is provided for convenience, but you should never use it in production. Use a reverse proxy (apache nginx caddy) instead!")
 		go func() {
-			if err := s.http.ListenAndServeTLS(s.conf.Cert, s.conf.Key); err != http.ErrServerClosed {
+			if err := s.http.ListenAndServeTLS(s.config.Cert, s.config.Key); err != http.ErrServerClosed {
 				s.logger.Panic().Err(err).Msg("unable to start https server")
 			}
 		}()
@@ -79,9 +76,13 @@ func (s *ServerCtx) Start() {
 	}
 }
 
-func (s *ServerCtx) Shutdown() error {
+func (s *HttpManagerCtx) Shutdown() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	return s.http.Shutdown(ctx)
+}
+
+func (s *HttpManagerCtx) Mount(fn func(r *chi.Mux)) {
+	fn(s.router)
 }

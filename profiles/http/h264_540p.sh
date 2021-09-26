@@ -1,18 +1,10 @@
 #!/bin/sh
 
-exec ffmpeg -hide_banner -loglevel warning \
-  -i "${1}" \
-  -vf scale=w=960:h=540:force_original_aspect_ratio=decrease \
-    -c:a aac \
-      -ar 48000 \
-      -b:a 128k \
-    -c:v h264 \
-      -profile:v main \
-      -b:v 1800k \
-      -maxrate 1800k \
-      -bufsize 3100k \
-      -crf 20 \
-      -sc_threshold 0 \
-      -g 48 \
-      -keyint_min 48 \
-  -f mpegts -
+export VW="960"
+export VH="540"
+export ABANDWIDTH="128k"
+export VBANDWIDTH="1800k"
+export VMAXRATE="1800k"
+export VBUFSIZE="3100k"
+
+"$(dirname "$0")"/../http_h264.sh "$1"
