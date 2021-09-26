@@ -1,3 +1,5 @@
 transcode.yml
 transcode.yaml
 go-transcode
+bin
+.env
