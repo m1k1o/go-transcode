@@ -56,7 +56,16 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 			return
 		}
 
-		cmd, err := a.transcodeStart("http", profile, input)
+		// check if profile exists
+		profilePath, err := a.ProfilePath("hls", profile)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to find profile")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("%v\n", err)))
+			return
+		}
+
+		cmd, err := a.transcodeStart(profilePath, input)
 		if err != nil {
 			logger.Warn().Err(err).Msg("transcode could not be started")
 			w.WriteHeader(http.StatusInternalServerError)
@@ -99,7 +108,16 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 			return
 		}
 
-		cmd, err := a.transcodeStart("http", profile, input)
+		// check if profile exists
+		profilePath, err := a.ProfilePath("hls", profile)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to find profile")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("%v\n", err)))
+			return
+		}
+
+		cmd, err := a.transcodeStart(profilePath, input)
 		if err != nil {
 			logger.Warn().Err(err).Msg("transcode could not be started")
 			w.WriteHeader(http.StatusInternalServerError)

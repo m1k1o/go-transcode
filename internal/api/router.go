@@ -48,21 +48,26 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 	r.Group(a.Http)
 }
 
-func (a *ApiManagerCtx) transcodeStart(folder string, profile string, input string) (*exec.Cmd, error) {
+func (a *ApiManagerCtx) ProfilePath(folder string, profile string) (string, error) {
+	// [profiles]/hls,http/[profile].sh
+	// [profiles] defaults to [basedir]/profiles
+
+	if !resourceRegex.MatchString(profile) {
+		return "", fmt.Errorf("invalid profile path")
+	}
+
+	profilePath := path.Join(a.config.Profiles, folder, fmt.Sprintf("%s.sh", profile))
+	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
+		return "", err
+	}
+	return profilePath, nil
+}
+
+// Call ProfilePath before
+func (a *ApiManagerCtx) transcodeStart(profilePath string, input string) (*exec.Cmd, error) {
 	url, ok := a.config.Streams[input]
 	if !ok {
 		return nil, fmt.Errorf("stream not found")
-	}
-
-	if !resourceRegex.MatchString(profile) {
-		return nil, fmt.Errorf("invalid profile path")
-	}
-
-	// [profiles]/hls,http/[profile].sh
-	// [profiles] defaults to [basedir]/profiles
-	profilePath := path.Join(a.config.Profiles, folder, fmt.Sprintf("%s.sh", profile))
-	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
-		return nil, err
 	}
 
 	log.Info().Str("profilePath", profilePath).Str("url", url).Msg("command startred")

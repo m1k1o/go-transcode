@@ -39,6 +39,15 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 			return
 		}
 
+		// check if profile exists
+		profilePath, err := a.ProfilePath("hls", profile)
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to find profile")
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(fmt.Sprintf("%v\n", err)))
+			return
+		}
+
 		ID := fmt.Sprintf("%s/%s", profile, input)
 
 		manager, ok := hlsManagers[ID]
@@ -46,11 +55,9 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 			// create new manager
 			manager = hls.New(func() *exec.Cmd {
 				// get transcode cmd
-				cmd, err := a.transcodeStart("hls", profile, input)
+				cmd, err := a.transcodeStart(profilePath, input)
 				if err != nil {
 					logger.Error().Err(err).Msg("transcode could not be started")
-					w.WriteHeader(http.StatusInternalServerError)
-					w.Write([]byte(fmt.Sprintf("%v\n", err)))
 				}
 
 				return cmd
