@@ -27,24 +27,22 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		input := chi.URLParam(r, "input")
 
 		if !resourceRegex.MatchString(profile) || !resourceRegex.MatchString(input) {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("400 invalid parameters"))
+			http.Error(w, "400 invalid parameters", http.StatusBadRequest)
 			return
 		}
 
 		// check if stream exists
 		_, ok := a.config.Streams[input]
 		if !ok {
-			http.NotFound(w, r)
+			http.Error(w, "404 stream not found", http.StatusNotFound)
 			return
 		}
 
 		// check if profile exists
 		profilePath, err := a.ProfilePath("hls", profile)
 		if err != nil {
-			logger.Error().Err(err).Msg("Failed to find profile")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("%v\n", err)))
+			logger.Warn().Err(err).Msg("profile path could not be found")
+			http.Error(w, "404 profile not found", http.StatusNotFound)
 			return
 		}
 
@@ -75,8 +73,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		file := chi.URLParam(r, "file")
 
 		if !resourceRegex.MatchString(profile) || !resourceRegex.MatchString(input) || !resourceRegex.MatchString(file) {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte("400 invalid parameters"))
+			http.Error(w, "400 invalid parameters", http.StatusBadRequest)
 			return
 		}
 
@@ -84,8 +81,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 		manager, ok := hlsManagers[ID]
 		if !ok {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte("404 transcode not found"))
+			http.Error(w, "404 transcode not found", http.StatusNotFound)
 			return
 		}
 
@@ -94,7 +90,6 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 	r.Get("/{profile}/{input}/play.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(playHTML))
-		return
+		_, _ = w.Write([]byte(playHTML))
 	})
 }

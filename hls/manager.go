@@ -176,7 +176,7 @@ func (m *ManagerCtx) Stop() {
 			err := m.cmd.Process.Kill()
 			m.logger.Err(err).Msg("killing proccess")
 		}
-		m.cmd.Wait()
+		_ = m.cmd.Wait()
 		m.cmd = nil
 	}
 
@@ -217,8 +217,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		err := m.Start()
 		if err != nil {
 			m.logger.Warn().Err(err).Msg("transcode could not be started")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
+			http.Error(w, "500 not available", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -228,21 +227,19 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		case playlist = <-m.playlistLoad:
 		case <-m.shutdown:
 			m.logger.Warn().Msg("playlist load failed because of shutdown")
-			w.WriteHeader(http.StatusNotFound)
 			// When command failed to start and timeout has been increased we reach this branch after a while
-			w.Write([]byte("404 playlist not found"))
+			http.Error(w, "404 playlist not found", http.StatusNotFound)
 			return
 		case <-time.After(playlistTimeout):
 			m.logger.Warn().Msg("playlist load channel timeouted")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("500 not available"))
+			http.Error(w, "500 not available", http.StatusInternalServerError)
 			return
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 	w.Header().Set("Cache-Control", "no-cache")
-	w.Write([]byte(playlist))
+	_, _ = w.Write([]byte(playlist))
 }
 
 func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
@@ -251,8 +248,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		m.logger.Warn().Str("path", path).Msg("media file not found")
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("404 media not found"))
+		http.Error(w, "404 media not found", http.StatusNotFound)
 		return
 	}
 

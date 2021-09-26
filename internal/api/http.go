@@ -1,7 +1,6 @@
 package api
 
 import (
-	"fmt"
 	"io"
 	"net/http"
 	"os/exec"
@@ -36,8 +35,10 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 			write.Close()
 		}()
 
-		go cmd.Run()
-		io.Copy(w, read)
+		go func() {
+			_ = cmd.Run()
+		}()
+		_, _ = io.Copy(w, read)
 	})
 
 	r.Get("/{profile}/{input}", func(w http.ResponseWriter, r *http.Request) {
@@ -52,24 +53,22 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		// check if stream exists
 		_, ok := a.config.Streams[input]
 		if !ok {
-			http.NotFound(w, r)
+			http.Error(w, "404 stream not found", http.StatusNotFound)
 			return
 		}
 
 		// check if profile exists
 		profilePath, err := a.ProfilePath("hls", profile)
 		if err != nil {
-			logger.Error().Err(err).Msg("Failed to find profile")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("%v\n", err)))
+			logger.Warn().Err(err).Msg("profile path could not be found")
+			http.Error(w, "404 profile not found", http.StatusNotFound)
 			return
 		}
 
 		cmd, err := a.transcodeStart(profilePath, input)
 		if err != nil {
 			logger.Warn().Err(err).Msg("transcode could not be started")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("%v", err)))
+			http.Error(w, "500 not available", http.StatusInternalServerError)
 			return
 		}
 
@@ -87,8 +86,10 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 			write.Close()
 		}()
 
-		go cmd.Run()
-		io.Copy(w, read)
+		go func() {
+			_ = cmd.Run()
+		}()
+		_, _ = io.Copy(w, read)
 	})
 
 	// buffered http streaming (alternative to prervious type)
@@ -104,24 +105,22 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		// check if stream exists
 		_, ok := a.config.Streams[input]
 		if !ok {
-			http.NotFound(w, r)
+			http.Error(w, "404 stream not found", http.StatusNotFound)
 			return
 		}
 
 		// check if profile exists
 		profilePath, err := a.ProfilePath("hls", profile)
 		if err != nil {
-			logger.Error().Err(err).Msg("Failed to find profile")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("%v\n", err)))
+			logger.Warn().Err(err).Msg("profile path could not be found")
+			http.Error(w, "404 profile not found", http.StatusNotFound)
 			return
 		}
 
 		cmd, err := a.transcodeStart(profilePath, input)
 		if err != nil {
 			logger.Warn().Err(err).Msg("transcode could not be started")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(fmt.Sprintf("%v", err)))
+			http.Error(w, "500 not available", http.StatusInternalServerError)
 			return
 		}
 
@@ -133,7 +132,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		cmd.Stderr = utils.LogWriter(logger)
 
 		go utils.IOPipeToHTTP(w, read)
-		cmd.Run()
+		_ = cmd.Run()
 		write.Close()
 		logger.Info().Msg("command stopped")
 	})
