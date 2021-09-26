@@ -51,7 +51,7 @@ func init() {
 			}
 
 			viper.AddConfigPath(".")
-			viper.SetConfigName("transcode")
+			viper.SetConfigName("config")
 		}
 
 		viper.SetEnvPrefix("transcode")
