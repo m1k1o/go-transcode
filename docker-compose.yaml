@@ -8,5 +8,5 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./transcode.yaml:/app/transcode.yaml
+      - ./config.yaml:/app/config.yaml
     command: serve -d

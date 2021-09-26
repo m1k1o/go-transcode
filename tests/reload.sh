@@ -7,7 +7,7 @@ if [ $# -lt 1 ] || [ ! -f "$1" ]; then
 	exit 1
 fi
 
-tmpfile=$(mktemp --suffix .yml)
+tmpfile=$(mktemp --suffix .yaml)
 log=$(mktemp)
 
 BASE_PORT=8888

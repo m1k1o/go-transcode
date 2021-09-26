@@ -27,7 +27,7 @@ Features:
 
 ## Config
 
-Place your config file in `./transcode.yml` (or `/etc/transcode/transcode.yml`). The streams are defined like this:
+Place your config file in `./config.yaml` (or `/etc/transcode/config.yaml`). The streams are defined like this:
 
 ```yaml
 streams:
@@ -75,7 +75,7 @@ docker build -t go-transcode:latest .
 docker run --rm -d \
   --name="go-transcode" \
   -p "8080:8080" \
-  -v "${PWD}/transcode.yaml:/app/transcode.yaml" go-transcode:latest
+  -v "${PWD}/config.yaml:/app/config.yaml" go-transcode:latest
 ```
 
 ## Nvidia GPU support (docker)
@@ -97,7 +97,7 @@ docker run --rm -d \
   --gpus=all \
   --name="go-transcode-nvidia" \
   -p "8080:8080" \
-  -v "${PWD}/transcode.yaml:/app/transcode.yaml" go-transcode-nvidia:latest
+  -v "${PWD}/config.yaml:/app/config.yaml" go-transcode-nvidia:latest
 ```
 
 ### Supported inputs
