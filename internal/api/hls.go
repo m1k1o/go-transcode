@@ -1,6 +1,7 @@
 package api
 
 import (
+	_ "embed"
 	"fmt"
 	"net/http"
 	"os/exec"
@@ -12,6 +13,9 @@ import (
 )
 
 var hlsManagers map[string]hls.Manager = make(map[string]hls.Manager)
+
+//go:embed play.html
+var playHTML string
 
 func (a *ApiManagerCtx) HLS(r chi.Router) {
 	r.Get("/{profile}/{input}/index.m3u8", func(w http.ResponseWriter, r *http.Request) {
@@ -83,8 +87,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 
 	r.Get("/{profile}/{input}/play.html", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-
-		file := a.config.AbsPath("data", "play.html")
-		http.ServeFile(w, r, file)
+		w.Write([]byte(playHTML))
+		return
 	})
 }
