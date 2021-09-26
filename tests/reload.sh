@@ -2,7 +2,7 @@
 
 go build || exit 1
 
-if [ $# -lt 1 ] || [ ! -f $1 ]; then 
+if [ $# -lt 1 ] || [ ! -f "$1" ]; then 
 	echo "Please give test video first argument"
 	exit 1
 fi
@@ -30,7 +30,7 @@ baseurl="http://localhost:$port"
 
 echo "Using port: $port. Logging to $log"
 
-echo -e "streams:\n  test: $1" > $tmpfile
+echo -e "streams:\n  test: "$1"" > $tmpfile
 
 ./go-transcode serve --config $tmpfile --bind :$port >> $log 2>&1 &
 pid=$!
@@ -53,7 +53,7 @@ else
 fi
 
 # Change config and try again test2
-echo -e "streams:\n  test2: $1" > $tmpfile
+echo -e "streams:\n  test2: "$1"" > $tmpfile
 sleep 1
 
 output="$(curl -o /dev/null -s -I -XGET -w "%{http_code}" $baseurl/h264_720p/test2)"

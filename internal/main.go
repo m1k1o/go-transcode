@@ -73,5 +73,6 @@ func (main *Main) ServeCommand(cmd *cobra.Command, args []string) {
 }
 
 func (main *Main) ConfigReload() {
-	// TODO: Implement.
+	main.RootConfig.Set()
+	main.ServerConfig.Set()
 }
