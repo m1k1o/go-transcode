@@ -65,7 +65,7 @@ In these profile directories, actual profiles are located in `hls/` and `http/`,
 
 Clone repository and build with go compiler:
 
-```
+```sh
 $ git clone https://github.com/m1k1o/go-transcode
 $ cd go-transcode
 $ go build
