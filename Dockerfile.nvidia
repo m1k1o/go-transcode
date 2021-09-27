@@ -1,9 +1,15 @@
 ARG GO_TRANSCODE_IMAGE=go-transcode:latest
 ARG BASE_IMAGE=willprice/nvidia-ffmpeg
 
+#
+# STAGE 1: build executable binary
+#
 FROM $GO_TRANSCODE_IMAGE as build
-FROM $BASE_IMAGE as base
 
+#
+# STAGE 2: build a small image
+#
+FROM $BASE_IMAGE as base
 WORKDIR /app
 
 ARG USERNAME=user
@@ -13,13 +19,14 @@ ARG USER_GID=$USER_UID
 RUN groupadd --gid $USER_GID $USERNAME; \
     useradd --uid $USER_UID --gid $USERNAME --shell /bin/bash --create-home $USERNAME;
 
-COPY --from=build /app/bin bin
+COPY --from=build /app/go-transcode go-transcode
 COPY profiles profiles
-COPY data data
 
 ENV USER=$USERNAME
 ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
 
+EXPOSE 8080
 ENV TRANSCODE_BIND=:8080
-ENTRYPOINT [ "bin/transcode" ]
+
+ENTRYPOINT [ "./go-transcode" ]
 CMD [ "serve" ]
