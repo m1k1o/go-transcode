@@ -61,6 +61,24 @@ go-transcode supports any formats that ffmpeg likes. We provide profiles out-of-
 
 In these profile directories, actual profiles are located in `hls/` and `http/`, depending on the output format requested. The profiles scripts detect hardware support by running ffmpeg. No special config needed to use hardware acceleration.
 
+## Install
+
+Clone repository and build with go compiler:
+
+```sh
+$ git clone https://github.com/m1k1o/go-transcode
+$ cd go-transcode
+$ go build
+$ ./go-transcode serve
+3:58PM WRN preflight complete without config file debug=false
+3:56PM INF starting main server service=main
+3:56PM INF http listening on 127.0.0.1:8080 module=http
+3:56PM INF serving streams from basedir /home/klahaha/go-transcode: map[] service=main
+3:56PM INF main ready service=main
+```
+
+First line is warning and "serving streams" line says empty list (`map[]`) because we don't have config.yaml so there no stream configured. Make your config.yaml and try again.
+
 ## Docker
 
 ### Build
