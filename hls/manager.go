@@ -20,7 +20,7 @@ import (
 // how often should be cleanup called
 const cleanupPeriod = 4 * time.Second
 
-// timeot for first playlist, when it waits for new data
+// timeout for first playlist, when it waits for new data
 const playlistTimeout = 60 * time.Second
 
 // minimum segments available to consider stream as active
@@ -250,11 +250,11 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		// when command exits before providing any playlist
 		case <-m.shutdown:
 			m.logger.Warn().Msg("playlist load failed because of shutdown")
-			http.Error(w, "404 playlist not found", http.StatusNotFound)
+			http.Error(w, "500 playlist not available", http.StatusInternalServerError)
 			return
 		case <-time.After(playlistTimeout):
 			m.logger.Warn().Msg("playlist load channel timeouted")
-			http.Error(w, "500 not available", http.StatusInternalServerError)
+			http.Error(w, "504 playlist timeout", http.StatusGatewayTimeout)
 			return
 		}
 	}
