@@ -12,5 +12,5 @@ type Manager interface {
 
 	OnStart(event func())
 	OnCmdLog(event func(message string))
-	OnStop(event func())
+	OnStop(event func(err error))
 }
