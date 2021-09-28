@@ -186,6 +186,10 @@ func (m *ManagerCtx) Start() error {
 
 		err := os.RemoveAll(m.tempdir)
 		m.logger.Err(err).Msg("removing tempdir")
+
+		m.mu.Lock()
+		m.cmd = nil
+		m.mu.Unlock()
 	}()
 
 	return err
