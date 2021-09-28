@@ -25,26 +25,25 @@ var root = &cobra.Command{
 
 func init() {
 	cobra.OnInitialize(func() {
-		config := transcode.Service.RootConfig
-		config.Set()
-
 		//////
 		// logs
 		//////
 		zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
 
-		if config.Debug {
-			zerolog.SetGlobalLevel(zerolog.DebugLevel)
-		} else {
-			zerolog.SetGlobalLevel(zerolog.InfoLevel)
-		}
-
 		//////
 		// configs
 		//////
-		if config.CfgFile != "" {
-			viper.SetConfigFile(config.CfgFile) // use config file from the flag
+
+		// at this point we did not read any config data, so we need to tell
+		// explicitly how to get this value
+		cfgFile := viper.GetString("config") // Use config file from the flag
+		if cfgFile == "" {
+			cfgFile = os.Getenv("TRANSCODE_CONFIG") // Use config file from the env
+		}
+
+		if cfgFile != "" {
+			viper.SetConfigFile(cfgFile) // use config file from the flag
 		} else {
 			if runtime.GOOS == "linux" {
 				viper.AddConfigPath("/etc/transcode/")
@@ -58,13 +57,20 @@ func init() {
 		viper.AutomaticEnv() // read in environment variables that match
 
 		err := viper.ReadInConfig()
-		if err != nil && config.CfgFile != "" {
+		if err != nil && cfgFile != "" {
 			log.Err(err)
 		}
 
-		logger := log.With().
-			Bool("debug", config.Debug).
-			Logger()
+		// all configs (from file, env and flags) are loaded now,
+		// we can set them
+		config := transcode.Service.RootConfig
+		config.Set()
+
+		if config.Debug {
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		} else {
+			zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		}
 
 		file := viper.ConfigFileUsed()
 		if file != "" {
@@ -74,9 +80,15 @@ func init() {
 			})
 
 			viper.WatchConfig()
-			logger.Info().Str("config", file).Msg("preflight complete with config file")
+
+			log.Info().
+				Bool("debug", config.Debug).
+				Str("config", file).
+				Msg("preflight complete with config file")
 		} else {
-			logger.Warn().Msg("preflight complete without config file")
+			log.Warn().
+				Bool("debug", config.Debug).
+				Msg("preflight complete without config file")
 		}
 	})
 
