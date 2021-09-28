@@ -40,6 +40,9 @@ Full configuration example:
 # allow debug outputs
 debug: true
 
+# mount debug pprof endpoint at /debug/pprof/
+pprof: true
+
 # bind server to IP:PORT (use :8888 for all connections)
 bind: localhost:8888
 
