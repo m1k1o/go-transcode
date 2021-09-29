@@ -11,12 +11,18 @@ import (
 
 type Root struct {
 	Debug   bool
+	PProf   bool
 	CfgFile string
 }
 
 func (Root) Init(cmd *cobra.Command) error {
 	cmd.PersistentFlags().BoolP("debug", "d", false, "enable debug mode")
 	if err := viper.BindPFlag("debug", cmd.PersistentFlags().Lookup("debug")); err != nil {
+		return err
+	}
+
+	cmd.PersistentFlags().Bool("pprof", false, "enable pprof endpoint available at /debug/pprof")
+	if err := viper.BindPFlag("pprof", cmd.PersistentFlags().Lookup("pprof")); err != nil {
 		return err
 	}
 
@@ -30,6 +36,7 @@ func (Root) Init(cmd *cobra.Command) error {
 
 func (s *Root) Set() {
 	s.Debug = viper.GetBool("debug")
+	s.PProf = viper.GetBool("pprof")
 	s.CfgFile = viper.GetString("config")
 }
 

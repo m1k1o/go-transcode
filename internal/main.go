@@ -45,6 +45,12 @@ func (main *Main) Start() {
 	main.httpManager.Mount(main.apiManager.Mount)
 	main.httpManager.Start()
 
+	if main.RootConfig.PProf {
+		pathPrefix := "/debug/pprof/"
+		main.httpManager.WithDebugPProf(pathPrefix)
+		main.logger.Info().Msgf("mounted debug pprof endpoint at %s", pathPrefix)
+	}
+
 	main.logger.Info().Msgf("serving streams from basedir %s: %s", config.BaseDir, config.Streams)
 }
 
