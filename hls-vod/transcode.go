@@ -124,8 +124,14 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 		return nil, err
 	}
 
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+
 	segments := make(chan string, 1)
 
+	// handle stdout
 	go func() {
 		defer close(segments)
 
@@ -139,6 +145,21 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 		}
 	}()
 
+	// handle stderr
+	go func() {
+		defer close(segments)
+
+		scanner := bufio.NewScanner(stderr)
+		for scanner.Scan() {
+			log.Println(scanner.Text())
+		}
+
+		if err := scanner.Err(); err != nil {
+			log.Println("Error while reading FFmpeg stderr:", err)
+		}
+	}()
+
+	// wait until execution finishes
 	go func() {
 		err := cmd.Wait()
 		if err != nil {
