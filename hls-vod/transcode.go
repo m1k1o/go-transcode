@@ -12,9 +12,10 @@ import (
 )
 
 type TranscodeConfig struct {
-	InputFilePath string
-	OutputDirPath string
-	SegmentPrefix string
+	InputFilePath string // Transcoded video input.
+	OutputDirPath string // Segments output path.
+	SegmentPrefix string // e.g. prefix-000001.ts
+	SegmentOffset int    // Start segment number.
 
 	SegmentTimes []float64
 	VideoProfile *VideoProfile
@@ -112,7 +113,7 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 		"-segment_time_delta", "0.2",
 		"-segment_format", "mpegts",
 		"-segment_times", commaSeparatedSegTimes,
-		"-segment_start_number", fmt.Sprintf("%.6f", startAt),
+		"-segment_start_number", fmt.Sprintf("%d", config.SegmentOffset),
 		"-segment_list_type", "flat",
 		"-segment_list", "pipe:1", // Output completed segments to stdout.
 		path.Join(config.OutputDirPath, fmt.Sprintf("%s-%%05d.ts", config.SegmentPrefix)),
