@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"log"
 	"os/exec"
+	"path"
 	"strings"
+	"sync"
 )
 
 type TranscodeConfig struct {
@@ -45,7 +47,7 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 	for _, segmentTime := range config.SegmentTimes {
 		fmtSegTimes = append(
 			fmtSegTimes,
-			fmt.Sprintf("%.6f,", segmentTime),
+			fmt.Sprintf("%.6f", segmentTime),
 		)
 	}
 	commaSeparatedSegTimes := strings.Join(fmtSegTimes[:], ",")
@@ -113,11 +115,10 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 		"-segment_start_number", fmt.Sprintf("%.6f", startAt),
 		"-segment_list_type", "flat",
 		"-segment_list", "pipe:1", // Output completed segments to stdout.
-		fmt.Sprintf("%s-%%05d.ts", config.SegmentPrefix),
+		path.Join(config.OutputDirPath, fmt.Sprintf("%s-%%05d.ts", config.SegmentPrefix)),
 	}...)
 
 	cmd := exec.CommandContext(ctx, ffmpegBinary, args...)
-	cmd.Dir = config.OutputDirPath
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -129,11 +130,18 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 		return nil, err
 	}
 
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
 	segments := make(chan string, 1)
 
 	// handle stdout
 	go func() {
-		defer close(segments)
+		defer func() {
+			wg.Wait()
+
+			close(segments)
+		}()
 
 		scanner := bufio.NewScanner(stdout)
 		for scanner.Scan() {
@@ -147,7 +155,7 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 
 	// handle stderr
 	go func() {
-		defer close(segments)
+		defer wg.Done()
 
 		scanner := bufio.NewScanner(stderr)
 		for scanner.Scan() {
@@ -159,8 +167,13 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 		}
 	}()
 
+	// start execution
+	err = cmd.Start()
+
 	// wait until execution finishes
 	go func() {
+		defer wg.Done()
+
 		err := cmd.Wait()
 		if err != nil {
 			log.Println("FFmpeg process exited with error:", err)
@@ -169,5 +182,5 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 		}
 	}()
 
-	return segments, cmd.Start()
+	return segments, err
 }
