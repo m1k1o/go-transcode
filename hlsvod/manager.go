@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -28,8 +29,9 @@ type ManagerCtx struct {
 		onStop   func(err error)
 	}
 
-	probeData    *ProbeMediaData
-	segmentTimes []float64
+	probeData       *ProbeMediaData
+	segmentTimes    []float64
+	segmentDuration float64
 
 	shutdown chan struct{}
 	ctx      context.Context
@@ -120,6 +122,33 @@ func (m *ManagerCtx) Cleanup() {
 	// stop transcoding processes that are not needed anymore
 }
 
+func (m *ManagerCtx) getPlaylist() string {
+	// playlist prefix
+	playlist := []string{
+		"#EXTM3U",
+		"#EXT-X-VERSION:4",
+		"#EXT-X-PLAYLIST-TYPE:VOD",
+		"#EXT-X-MEDIA-SEQUENCE:0",
+		fmt.Sprintf("#EXT-X-TARGETDURATION:%.2f", m.segmentDuration),
+	}
+
+	// playlist segments
+	for i := 1; i < len(m.segmentTimes); i++ {
+		playlist = append(playlist,
+			fmt.Sprintf("#EXTINF:%.3f, no desc", m.segmentTimes[i]-m.segmentTimes[i-1]),
+			fmt.Sprintf("%s-%05d.ts", m.config.SegmentPrefix, i),
+		)
+	}
+
+	// playlist suffix
+	playlist = append(playlist,
+		"#EXT-X-ENDLIST",
+	)
+
+	// join with newlines
+	return strings.Join(playlist, "\n")
+}
+
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	// ensure that transcode started
 	if !m.ready {
@@ -144,7 +173,9 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// generate playlist from segment times
+	playlist := m.getPlaylist()
+	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+	_, _ = w.Write([]byte(playlist))
 }
 
 func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
