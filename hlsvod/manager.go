@@ -1,46 +1,104 @@
 package hlsvod
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
+
+// how long can it take for transcode to be ready
+const readyTimeout = 24 * time.Second
 
 type ManagerCtx struct {
 	logger zerolog.Logger
 	mu     sync.Mutex
 	config Config
 
-	active bool
+	ready         bool
+	onReadyChange chan struct{}
+
 	events struct {
 		onStart  func()
 		onCmdLog func(message string)
 		onStop   func(err error)
 	}
 
+	probeData    *ProbeMediaData
+	segmentTimes []float64
+
 	shutdown chan struct{}
+	ctx      context.Context
+	cancel   context.CancelFunc
 }
 
 func New(config Config) *ManagerCtx {
+	ctx, cancel := context.WithCancel(context.Background())
 	return &ManagerCtx{
 		logger: log.With().Str("module", "hlsvod").Str("submodule", "manager").Logger(),
 		config: config,
 
-		shutdown: make(chan struct{}),
+		ctx:    ctx,
+		cancel: cancel,
 	}
 }
 
-func (m *ManagerCtx) Start() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
+// TODO: Cache.
+func (m *ManagerCtx) loadData() (err error) {
 	// start ffprobe to get metadata about current media
-	// if video
-	//	- start ffprobe to get keyframes from video
+	m.probeData, err = ProbeMedia(m.ctx, m.config.FFprobeBinary, m.config.MediaPath)
+	if err != nil {
+		return fmt.Errorf("unable probe media for metadata: %v", err)
+	}
 
-	m.active = true
+	// if media has video, use keyframes as reference for segments
+	var keyframes []float64
+	if m.probeData.Video != nil && m.segmentTimes == nil {
+		// start ffprobe to get keyframes from video
+		videoData, err := ProbeVideo(m.ctx, m.config.FFprobeBinary, m.config.MediaPath)
+		if err != nil {
+			return fmt.Errorf("unable probe video for keyframes: %v", err)
+		}
+		keyframes = videoData.PktPtsTime
+	}
+
+	// TODO: Generate segment times from keyframes.
+	m.segmentTimes = keyframes
+	return nil
+}
+
+func (m *ManagerCtx) Start() (err error) {
+	if m.ready {
+		return fmt.Errorf("already running")
+	}
+
+	m.mu.Lock()
+	// initialize signaling channels
+	m.shutdown = make(chan struct{})
+	m.ready = false
+	m.onReadyChange = make(chan struct{})
+	m.mu.Unlock()
+
+	// Load data asynchronously
+	go func() {
+		if err := m.loadData(); err != nil {
+			log.Printf("%v\n", err)
+			return
+		}
+
+		m.mu.Lock()
+		// set video to ready state
+		m.ready = true
+		close(m.onReadyChange)
+		m.mu.Unlock()
+	}()
+
+	// TODO: Cleanup process.
+
 	return nil
 }
 
@@ -50,8 +108,11 @@ func (m *ManagerCtx) Stop() {
 
 	// stop all transcoding processes
 	// remove all transcoded segments
+
+	m.cancel()
 	close(m.shutdown)
-	m.active = false
+
+	m.ready = false
 }
 
 func (m *ManagerCtx) Cleanup() {
@@ -60,11 +121,30 @@ func (m *ManagerCtx) Cleanup() {
 }
 
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
-	// check if probe data exists
-	//	- if not, check if probe is not running
-	//	-	- if not running, start it
-	//	- wait for it to finish
-	// return existing playlist
+	// ensure that transcode started
+	if !m.ready {
+		select {
+		// waiting for transcode to be ready
+		case <-m.onReadyChange:
+			// check if it started succesfully
+			if !m.ready {
+				m.logger.Warn().Msgf("playlist load failed")
+				http.Error(w, "504 playlist not available", http.StatusInternalServerError)
+				return
+			}
+		// when transcode stops before getting ready
+		case <-m.shutdown:
+			m.logger.Warn().Msg("playlist load failed because of shutdown")
+			http.Error(w, "500 playlist not available", http.StatusInternalServerError)
+			return
+		case <-time.After(readyTimeout):
+			m.logger.Warn().Msg("playlist load timeouted")
+			http.Error(w, "504 playlist timeout", http.StatusGatewayTimeout)
+			return
+		}
+	}
+
+	// generate playlist from segment times
 }
 
 func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
