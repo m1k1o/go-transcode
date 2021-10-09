@@ -19,7 +19,10 @@ import (
 )
 
 // how long can it take for transcode to be ready
-const readyTimeout = 24 * time.Second
+const readyTimeout = 80 * time.Second
+
+// how long can it take for transcode to return first data
+const transcodeTimeout = 10 * time.Second
 
 type ManagerCtx struct {
 	logger zerolog.Logger
@@ -28,7 +31,6 @@ type ManagerCtx struct {
 
 	segmentLength float64
 	segmentOffset float64
-	segmentSuffix string
 
 	ready         bool
 	onReadyChange chan struct{}
@@ -202,6 +204,54 @@ func (m *ManagerCtx) initialize() {
 		Msg("initialization completed")
 }
 
+// TODO: Optimize for more segments.
+func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) chan error {
+	log.Info().Int("index", index).Interface("segments", m.segmentsTimes[index:index+1]).Msg("transcoding segment")
+
+	response := make(chan error)
+
+	go func() {
+		ctx := context.Background()
+		data, err := TranscodeSegments(ctx, "ffmpeg", TranscodeConfig{
+			InputFilePath: m.config.MediaPath,
+			OutputDirPath: m.config.TranscodeDir,
+			SegmentPrefix: m.config.SegmentPrefix,
+
+			SegmentOffset: index,
+			SegmentTimes:  m.segmentsTimes[index : index+2],
+
+			// TODO: From config.
+			VideoProfile: &VideoProfile{
+				Width:   1280,
+				Height:  720,
+				Bitrate: 4200,
+			},
+			// TODO: From config.
+			AudioProfile: &AudioProfile{
+				Bitrate: 128,
+			},
+		})
+		if err != nil {
+			log.Err(err).Int("index", index).Msg("error occured while transcoding segment")
+			response <- err
+			return
+		}
+		log.Info().Int("index", index).Msg("transcode process started")
+
+		for {
+			segment, ok := <-data
+			if !ok {
+				log.Info().Int("index", index).Msg("transcode process finished")
+				return
+			}
+			log.Info().Int("index", index).Str("segment", segment).Msg("transcode process returned a segment")
+			response <- nil
+		}
+	}()
+
+	return response
+}
+
 func (m *ManagerCtx) Start() (err error) {
 	if m.ready {
 		return fmt.Errorf("already running")
@@ -301,16 +351,25 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 
 	// check if media is already transcoded
 	if !available {
-		m.logger.Warn().Int("index", index).Msg("media needs to be transcoded")
-		http.Error(w, "500 not transcoded", http.StatusInternalServerError)
-		// TODO:
-		//	- if not, check if probe data exists
-		//	-	- if not, check if probe is not running
-		//	-	-	- if not, start it
-		//	-	- wait for it to finish
-		//	- start transcoding from this segment
-		//	- wait for this segment to finish
-		return
+		select {
+		// waiting for segment to be transcoded
+		case err := <-m.transcodeSegment(r.Context(), index):
+			// check if it started succesfully
+			if err != nil {
+				m.logger.Err(err).Int("index", index).Msg("unable to transcode media")
+				http.Error(w, "500 unable to transcode", http.StatusInternalServerError)
+				return
+			}
+		// when transcode stops before getting ready
+		case <-m.shutdown:
+			m.logger.Warn().Msg("media transcode failed because of shutdown")
+			http.Error(w, "500 media not available", http.StatusInternalServerError)
+			return
+		case <-time.After(transcodeTimeout):
+			m.logger.Warn().Msg("media transcode timeouted")
+			http.Error(w, "504 media timeout", http.StatusGatewayTimeout)
+			return
+		}
 	}
 
 	// build whole segment path
