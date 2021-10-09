@@ -283,9 +283,10 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
-	// gev everything after last slash
+	// same of the segment is everything after last slash
 	segmentName := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
 
+	// get index and check if segment name is valid
 	index, ok := m.parseSegmentIndex(segmentName)
 	if !ok {
 		http.Error(w, "400 bad media path", http.StatusBadRequest)
@@ -312,6 +313,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// build whole segment path
 	segmentPath := path.Join(m.config.TranscodeDir, segmentName)
 	if _, err := os.Stat(segmentPath); os.IsNotExist(err) {
 		m.logger.Warn().Int("index", index).Str("path", segmentPath).Msg("media file not found")
@@ -319,10 +321,9 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// return existing segment
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 	w.Header().Set("Cache-Control", "no-cache")
-
-	// return existing segment
 	http.ServeFile(w, r, segmentPath)
 }
 
