@@ -5,6 +5,9 @@ type Config struct {
 	TranscodeDir  string // Temporary directory to store transcoded elements.
 	SegmentPrefix string
 
+	Cache    bool
+	CacheDir string // If not empty, cache will folder will be used instead of media path
+
 	FFmpegBinary  string
 	FFprobeBinary string
 }

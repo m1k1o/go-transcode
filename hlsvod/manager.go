@@ -2,6 +2,8 @@ package hlsvod
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -22,6 +24,9 @@ type ManagerCtx struct {
 	mu     sync.Mutex
 	config Config
 
+	segmentDuration float64
+	segmentSuffix   string
+
 	ready         bool
 	onReadyChange chan struct{}
 
@@ -31,12 +36,10 @@ type ManagerCtx struct {
 		onStop   func(err error)
 	}
 
-	probeData       *ProbeMediaData
-	segmentTimes    []float64
-	segmentDuration float64
-	segmentSuffix   string
-
-	transcodedSegments map[int]bool
+	metadata      *ProbeMediaData
+	playlist      string       // m3u8 playlist string
+	segments      map[int]bool // map of segments and their availability
+	segmentsTimes []float64    // list of breakpoints for segments
 
 	shutdown chan struct{}
 	ctx      context.Context
@@ -57,38 +60,117 @@ func New(config Config) *ManagerCtx {
 	}
 }
 
-// TODO: Cache.
-func (m *ManagerCtx) loadData() (err error) {
-	log.Info().Msg("loading data")
+// fetch metadata using ffprobe
+func (m *ManagerCtx) fetchMetadata() error {
+	log.Info().Msg("fetching metadata")
 
 	// start ffprobe to get metadata about current media
-	m.probeData, err = ProbeMedia(m.ctx, m.config.FFprobeBinary, m.config.MediaPath)
+	metadata, err := ProbeMedia(m.ctx, m.config.FFprobeBinary, m.config.MediaPath)
 	if err != nil {
 		return fmt.Errorf("unable probe media for metadata: %v", err)
 	}
 
 	// if media has video, use keyframes as reference for segments
-	var keyframes []float64
-	if m.probeData.Video != nil && m.segmentTimes == nil {
+	if metadata.Video != nil && metadata.Video.PktPtsTime == nil {
 		// start ffprobe to get keyframes from video
 		videoData, err := ProbeVideo(m.ctx, m.config.FFprobeBinary, m.config.MediaPath)
 		if err != nil {
 			return fmt.Errorf("unable probe video for keyframes: %v", err)
 		}
-		keyframes = videoData.PktPtsTime
+		metadata.Video.PktPtsTime = videoData.PktPtsTime
 	}
 
+	log.Info().Interface("metadata", metadata).Msg("fetched metadata")
+	m.metadata = metadata
+	return nil
+}
+
+// load metadata from cache or fetch them and cache
+func (m *ManagerCtx) loadMetadata() error {
+	log.Info().Msg("loading metadata")
+
+	// bypass cache if not enabled
+	if !m.config.Cache {
+		return m.fetchMetadata()
+	}
+
+	// try to get cached data
+	data, err := m.getCacheData()
+	if err == nil {
+		// unmarshall cache data
+		err := json.Unmarshal(data, &m.metadata)
+		if err == nil {
+			return nil
+		}
+
+		log.Err(err).Msg("cache unmarhalling returned error, replacing")
+	} else if !errors.Is(err, os.ErrNotExist) {
+		log.Err(err).Msg("cache hit returned error, replacing")
+	}
+
+	// fetch fresh metadata from a file
+	if err := m.fetchMetadata(); err != nil {
+		return err
+	}
+
+	// marshall new metadata to bytes
+	data, err = json.Marshal(m.metadata)
+	if err != nil {
+		return err
+	}
+
+	if m.config.CacheDir != "" {
+		return m.saveGlobalCacheData(data)
+	}
+
+	return m.saveLocalCacheData(data)
+}
+
+func (m *ManagerCtx) getSegmentName(index int) string {
+	return m.config.SegmentPrefix + fmt.Sprintf(m.segmentSuffix, index)
+}
+
+func (m *ManagerCtx) getPlaylist() string {
+	// playlist prefix
+	playlist := []string{
+		"#EXTM3U",
+		"#EXT-X-VERSION:4",
+		"#EXT-X-PLAYLIST-TYPE:VOD",
+		"#EXT-X-MEDIA-SEQUENCE:0",
+		fmt.Sprintf("#EXT-X-TARGETDURATION:%.2f", m.segmentDuration),
+	}
+
+	// playlist segments
+	for i := 1; i < len(m.segmentsTimes); i++ {
+		playlist = append(playlist,
+			fmt.Sprintf("#EXTINF:%.3f, no desc", m.segmentsTimes[i]-m.segmentsTimes[i-1]),
+			m.getSegmentName(i),
+		)
+	}
+
+	// playlist suffix
+	playlist = append(playlist,
+		"#EXT-X-ENDLIST",
+	)
+
+	// join with newlines
+	return strings.Join(playlist, "\n")
+}
+
+func (m *ManagerCtx) initialize() {
 	// TODO: Generate segment times from keyframes.
-	m.segmentTimes = keyframes
+	m.segmentsTimes = m.metadata.Video.PktPtsTime
+
+	// generate playlist
+	m.playlist = m.getPlaylist()
 
 	// prepare transcode matrix from segment times
-	m.transcodedSegments = map[int]bool{}
-	for i := 1; i < len(m.segmentTimes); i++ {
-		m.transcodedSegments[i] = false
+	m.segments = map[int]bool{}
+	for i := 1; i < len(m.segmentsTimes); i++ {
+		m.segments[i] = false
 	}
 
-	log.Info().Interface("probe-data", m.probeData).Msg("loaded data")
-	return nil
+	log.Info().Interface("metadata", m.metadata).Msg("loaded metadata")
 }
 
 func (m *ManagerCtx) Start() (err error) {
@@ -103,12 +185,15 @@ func (m *ManagerCtx) Start() (err error) {
 	m.onReadyChange = make(chan struct{})
 	m.mu.Unlock()
 
-	// Load data asynchronously
+	// initialize transcoder asynchronously
 	go func() {
-		if err := m.loadData(); err != nil {
+		if err := m.loadMetadata(); err != nil {
 			log.Printf("%v\n", err)
 			return
 		}
+
+		// initialization based on metadata
+		m.initialize()
 
 		m.mu.Lock()
 		// set video to ready state
@@ -140,37 +225,6 @@ func (m *ManagerCtx) Cleanup() {
 	// stop transcoding processes that are not needed anymore
 }
 
-func (m *ManagerCtx) getSegmentName(index int) string {
-	return m.config.SegmentPrefix + fmt.Sprintf(m.segmentSuffix, index)
-}
-
-func (m *ManagerCtx) getPlaylist() string {
-	// playlist prefix
-	playlist := []string{
-		"#EXTM3U",
-		"#EXT-X-VERSION:4",
-		"#EXT-X-PLAYLIST-TYPE:VOD",
-		"#EXT-X-MEDIA-SEQUENCE:0",
-		fmt.Sprintf("#EXT-X-TARGETDURATION:%.2f", m.segmentDuration),
-	}
-
-	// playlist segments
-	for i := 1; i < len(m.segmentTimes); i++ {
-		playlist = append(playlist,
-			fmt.Sprintf("#EXTINF:%.3f, no desc", m.segmentTimes[i]-m.segmentTimes[i-1]),
-			m.getSegmentName(i),
-		)
-	}
-
-	// playlist suffix
-	playlist = append(playlist,
-		"#EXT-X-ENDLIST",
-	)
-
-	// join with newlines
-	return strings.Join(playlist, "\n")
-}
-
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	// ensure that transcode started
 	if !m.ready {
@@ -195,16 +249,15 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	playlist := m.getPlaylist()
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
-	_, _ = w.Write([]byte(playlist))
+	_, _ = w.Write([]byte(m.playlist))
 }
 
 func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	// TODO: get index from URL
 	index := 0
 
-	available, ok := m.transcodedSegments[index]
+	available, ok := m.segments[index]
 	if !ok {
 		m.logger.Warn().Int("index", index).Msg("media index not found")
 		http.Error(w, "404 index not found", http.StatusNotFound)
