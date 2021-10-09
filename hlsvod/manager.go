@@ -46,6 +46,8 @@ type ManagerCtx struct {
 	segments    map[int]string // map of segments and their filename
 	breakpoints []float64      // list of breakpoints for segments
 
+	segmentWait map[int]chan struct{} // map of segments and signaling channel for finished transcoding
+
 	shutdown chan struct{}
 	ctx      context.Context
 	cancel   context.CancelFunc
@@ -196,6 +198,9 @@ func (m *ManagerCtx) initialize() {
 		m.segments[i] = ""
 	}
 
+	// prepare segment wait map
+	m.segmentWait = map[int]chan struct{}{}
+
 	log.Info().
 		Int("segments", len(m.segments)).
 		Bool("video", m.metadata.Video != nil).
@@ -204,8 +209,8 @@ func (m *ManagerCtx) initialize() {
 		Msg("initialization completed")
 }
 
-// TODO: Optimize for more segments.
-func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan string, error) {
+func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan struct{}, error) {
+	// TODO: Optimize for more segments.
 	segmentTimes := m.breakpoints[index : index+2]
 	log.Info().Int("offset", index).Interface("segments-times", segmentTimes).Msg("transcoding segment")
 
@@ -220,12 +225,15 @@ func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan stri
 		SegmentOffset: index,
 		SegmentTimes:  segmentTimes,
 	})
+
 	if err != nil {
 		log.Err(err).Int("index", index).Msg("error occured while starting to transcode segment")
 		return nil, err
 	}
 
-	response := make(chan string)
+	response := make(chan struct{}, 1)
+	m.segmentWait[index] = response
+
 	go func() {
 		log.Info().Int("index", index).Msg("transcode process started")
 
@@ -235,8 +243,23 @@ func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan stri
 				log.Info().Int("index", index).Msg("transcode process finished")
 				return
 			}
-			log.Info().Int("index", index).Str("segment", segment).Msg("transcode process returned a segment")
-			response <- segment
+
+			log.Info().
+				Int("index", index).
+				Str("segment", segment).
+				Msg("transcode process returned a segment")
+
+			// save segment to matrix
+			m.segments[index] = segment
+
+			// notify waiting element, if exists
+			if res, ok := m.segmentWait[index]; ok {
+				close(res)
+				delete(m.segmentWait, index)
+			}
+
+			// expect new segment to come
+			index++
 		}
 	}()
 
@@ -334,6 +357,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// check if segment has already been transvoded
 	segmentName, ok := m.segments[index]
 	if !ok {
 		http.Error(w, "404 index not found", http.StatusNotFound)
@@ -342,16 +366,30 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 
 	// check if media is already transcoded
 	if segmentName == "" {
-		segChan, err := m.transcodeSegment(r.Context(), index)
-		if err != nil {
-			m.logger.Err(err).Int("index", index).Msg("unable to transcode media")
-			http.Error(w, "500 unable to transcode", http.StatusInternalServerError)
-			return
+		// check if segment transcoding is already in progress
+		segChan, ok := m.segmentWait[index]
+		if !ok {
+			var err error
+			segChan, err = m.transcodeSegment(r.Context(), index)
+
+			// if transcode proccess could not start
+			if err != nil {
+				m.logger.Err(err).Int("index", index).Msg("unable to transcode media")
+				http.Error(w, "500 unable to transcode", http.StatusInternalServerError)
+				return
+			}
 		}
 
 		select {
 		// waiting for new segment to be transcoded
-		case segmentName = <-segChan:
+		case <-segChan:
+			// now segment should be available
+			segmentName, ok = m.segments[index]
+			if !ok {
+				// this should never happen
+				http.Error(w, "404 segment not found even after transcoding", http.StatusNotFound)
+				return
+			}
 		// when transcode stops before getting ready
 		case <-m.shutdown:
 			m.logger.Warn().Msg("media transcode failed because of shutdown")
