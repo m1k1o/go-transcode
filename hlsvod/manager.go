@@ -24,8 +24,9 @@ type ManagerCtx struct {
 	mu     sync.Mutex
 	config Config
 
-	segmentDuration float64
-	segmentSuffix   string
+	segmentLength float64
+	segmentOffset float64
+	segmentSuffix string
 
 	ready         bool
 	onReadyChange chan struct{}
@@ -52,8 +53,9 @@ func New(config Config) *ManagerCtx {
 		logger: log.With().Str("module", "hlsvod").Str("submodule", "manager").Logger(),
 		config: config,
 
-		segmentDuration: 4.75,
-		segmentSuffix:   "-%05d.ts",
+		segmentLength: 3.50,
+		segmentOffset: 1.25,
+		segmentSuffix: "-%05d.ts",
 
 		ctx:    ctx,
 		cancel: cancel,
@@ -61,34 +63,33 @@ func New(config Config) *ManagerCtx {
 }
 
 // fetch metadata using ffprobe
-func (m *ManagerCtx) fetchMetadata() error {
+func (m *ManagerCtx) fetchMetadata() (err error) {
+	start := time.Now()
 	log.Info().Msg("fetching metadata")
 
 	// start ffprobe to get metadata about current media
-	metadata, err := ProbeMedia(m.ctx, m.config.FFprobeBinary, m.config.MediaPath)
+	m.metadata, err = ProbeMedia(m.ctx, m.config.FFprobeBinary, m.config.MediaPath)
 	if err != nil {
 		return fmt.Errorf("unable probe media for metadata: %v", err)
 	}
 
 	// if media has video, use keyframes as reference for segments
-	if metadata.Video != nil && metadata.Video.PktPtsTime == nil {
+	if m.metadata.Video != nil && m.metadata.Video.PktPtsTime == nil {
 		// start ffprobe to get keyframes from video
 		videoData, err := ProbeVideo(m.ctx, m.config.FFprobeBinary, m.config.MediaPath)
 		if err != nil {
 			return fmt.Errorf("unable probe video for keyframes: %v", err)
 		}
-		metadata.Video.PktPtsTime = videoData.PktPtsTime
+		m.metadata.Video.PktPtsTime = videoData.PktPtsTime
 	}
 
-	log.Info().Interface("metadata", metadata).Msg("fetched metadata")
-	m.metadata = metadata
-	return nil
+	elapsed := time.Since(start)
+	log.Info().Interface("duration", elapsed).Msg("fetched metadata")
+	return
 }
 
 // load metadata from cache or fetch them and cache
 func (m *ManagerCtx) loadMetadata() error {
-	log.Info().Msg("loading metadata")
-
 	// bypass cache if not enabled
 	if !m.config.Cache {
 		return m.fetchMetadata()
@@ -137,7 +138,7 @@ func (m *ManagerCtx) getPlaylist() string {
 		"#EXT-X-VERSION:4",
 		"#EXT-X-PLAYLIST-TYPE:VOD",
 		"#EXT-X-MEDIA-SEQUENCE:0",
-		fmt.Sprintf("#EXT-X-TARGETDURATION:%.2f", m.segmentDuration),
+		fmt.Sprintf("#EXT-X-TARGETDURATION:%.2f", m.segmentLength+m.segmentOffset),
 	}
 
 	// playlist segments
@@ -158,8 +159,13 @@ func (m *ManagerCtx) getPlaylist() string {
 }
 
 func (m *ManagerCtx) initialize() {
-	// TODO: Generate segment times from keyframes.
-	m.segmentsTimes = m.metadata.Video.PktPtsTime
+	keyframes := []float64{}
+	if m.metadata.Video != nil && m.metadata.Video.PktPtsTime != nil {
+		keyframes = m.metadata.Video.PktPtsTime
+	}
+
+	// generate segment times from keyframes
+	m.segmentsTimes = convertToSegments(keyframes, m.metadata.Duration, m.segmentLength, m.segmentOffset)
 
 	// generate playlist
 	m.playlist = m.getPlaylist()
@@ -170,7 +176,12 @@ func (m *ManagerCtx) initialize() {
 		m.segments[i] = false
 	}
 
-	log.Info().Interface("metadata", m.metadata).Msg("loaded metadata")
+	log.Info().
+		Int("segments", len(m.segments)).
+		Bool("video", m.metadata.Video != nil).
+		Int("audios", len(m.metadata.Audio)).
+		Str("duration", fmt.Sprintf("%v", m.metadata.Duration)).
+		Msg("initialization completed")
 }
 
 func (m *ManagerCtx) Start() (err error) {
