@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -55,7 +57,6 @@ func New(config Config) *ManagerCtx {
 
 		segmentLength: 3.50,
 		segmentOffset: 1.25,
-		segmentSuffix: "-%05d.ts",
 
 		ctx:    ctx,
 		cancel: cancel,
@@ -128,7 +129,24 @@ func (m *ManagerCtx) loadMetadata() error {
 }
 
 func (m *ManagerCtx) getSegmentName(index int) string {
-	return m.config.SegmentPrefix + fmt.Sprintf(m.segmentSuffix, index)
+	return fmt.Sprintf("%s-%05d.ts", m.config.SegmentPrefix, index)
+}
+
+func (m *ManagerCtx) parseSegmentIndex(segmentName string) (int, bool) {
+	regex := regexp.MustCompile(`^(.*)-([0-9]{5})\.ts$`)
+	matches := regex.FindStringSubmatch(segmentName)
+
+	if len(matches) != 3 || matches[1] != m.config.SegmentPrefix {
+		return 0, false
+	}
+
+	indexStr := matches[2]
+	index, err := strconv.Atoi(indexStr)
+	if indexStr == "" || err != nil {
+		return 0, false
+	}
+
+	return index, true
 }
 
 func (m *ManagerCtx) getPlaylist() string {
@@ -265,12 +283,17 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
-	// TODO: get index from URL
-	index := 0
+	// gev everything after last slash
+	segmentName := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
+
+	index, ok := m.parseSegmentIndex(segmentName)
+	if !ok {
+		http.Error(w, "400 bad media path", http.StatusBadRequest)
+		return
+	}
 
 	available, ok := m.segments[index]
 	if !ok {
-		m.logger.Warn().Int("index", index).Msg("media index not found")
 		http.Error(w, "404 index not found", http.StatusNotFound)
 		return
 	}
@@ -278,6 +301,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	// check if media is already transcoded
 	if !available {
 		m.logger.Warn().Int("index", index).Msg("media needs to be transcoded")
+		http.Error(w, "500 not transcoded", http.StatusInternalServerError)
 		// TODO:
 		//	- if not, check if probe data exists
 		//	-	- if not, check if probe is not running
@@ -285,11 +309,10 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 		//	-	- wait for it to finish
 		//	- start transcoding from this segment
 		//	- wait for this segment to finish
+		return
 	}
 
-	segmentName := m.getSegmentName(index)
 	segmentPath := path.Join(m.config.TranscodeDir, segmentName)
-
 	if _, err := os.Stat(segmentPath); os.IsNotExist(err) {
 		m.logger.Warn().Int("index", index).Str("path", segmentPath).Msg("media file not found")
 		http.Error(w, "404 media not found", http.StatusNotFound)
