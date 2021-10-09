@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"path"
 	"strings"
 	"sync"
 	"time"
@@ -34,6 +36,8 @@ type ManagerCtx struct {
 	segmentDuration float64
 	segmentSuffix   string
 
+	transcodedSegments map[int]bool
+
 	shutdown chan struct{}
 	ctx      context.Context
 	cancel   context.CancelFunc
@@ -55,6 +59,8 @@ func New(config Config) *ManagerCtx {
 
 // TODO: Cache.
 func (m *ManagerCtx) loadData() (err error) {
+	log.Info().Msg("loading data")
+
 	// start ffprobe to get metadata about current media
 	m.probeData, err = ProbeMedia(m.ctx, m.config.FFprobeBinary, m.config.MediaPath)
 	if err != nil {
@@ -74,6 +80,14 @@ func (m *ManagerCtx) loadData() (err error) {
 
 	// TODO: Generate segment times from keyframes.
 	m.segmentTimes = keyframes
+
+	// prepare transcode matrix from segment times
+	m.transcodedSegments = map[int]bool{}
+	for i := 1; i < len(m.segmentTimes); i++ {
+		m.transcodedSegments[i] = false
+	}
+
+	log.Info().Interface("probe-data", m.probeData).Msg("loaded data")
 	return nil
 }
 
@@ -187,14 +201,42 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
+	// TODO: get index from URL
+	index := 0
+
+	available, ok := m.transcodedSegments[index]
+	if !ok {
+		m.logger.Warn().Int("index", index).Msg("media index not found")
+		http.Error(w, "404 index not found", http.StatusNotFound)
+		return
+	}
+
 	// check if media is already transcoded
-	//	- if not, check if probe data exists
-	//	-	- if not, check if probe is not running
-	//	-	-	- if not, start it
-	//	-	- wait for it to finish
-	//	- start transcoding from this segment
-	//	- wait for this segment to finish
+	if !available {
+		m.logger.Warn().Int("index", index).Msg("media needs to be transcoded")
+		// TODO:
+		//	- if not, check if probe data exists
+		//	-	- if not, check if probe is not running
+		//	-	-	- if not, start it
+		//	-	- wait for it to finish
+		//	- start transcoding from this segment
+		//	- wait for this segment to finish
+	}
+
+	segmentName := m.getSegmentName(index)
+	segmentPath := path.Join(m.config.TranscodeDir, segmentName)
+
+	if _, err := os.Stat(segmentPath); os.IsNotExist(err) {
+		m.logger.Warn().Int("index", index).Str("path", segmentPath).Msg("media file not found")
+		http.Error(w, "404 media not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+	w.Header().Set("Cache-Control", "no-cache")
+
 	// return existing segment
+	http.ServeFile(w, r, segmentPath)
 }
 
 func (m *ManagerCtx) OnStart(event func()) {
