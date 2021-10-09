@@ -58,7 +58,6 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 
 	args := []string{
 		"-loglevel", "warning",
-		"-ignore_chapters", "1",
 	}
 
 	// Seek to start point. Note there is a bug(?) in ffmpeg: https://github.com/FFmpeg/FFmpeg/blob/fe964d80fec17f043763405f5804f397279d6b27/fftools/ffmpeg_opt.c#L1240

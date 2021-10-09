@@ -23,7 +23,6 @@ type ProbeMediaData struct {
 func ProbeMedia(ctx context.Context, ffprobeBinary string, inputFilePath string) (*ProbeMediaData, error) {
 	args := []string{
 		"-v", "error", // Hide debug information
-		"-ignore_chapters", "1",
 		"-show_format",  // Show container information
 		"-show_streams", // Show codec information
 		"-of", "json",
@@ -89,9 +88,12 @@ func ProbeMedia(ctx context.Context, ffprobeBinary string, inputFilePath string)
 				Duration: duration,
 			}
 		case "audio":
-			bitRate, err := strconv.ParseFloat(out.Streams[0].BitRate, 64)
-			if err != nil {
-				return nil, fmt.Errorf("unable to parse audio stream bitrate: %v", err)
+			var bitRate float64
+			if out.Streams[0].BitRate != "" {
+				bitRate, err = strconv.ParseFloat(out.Streams[0].BitRate, 64)
+				if err != nil {
+					return nil, fmt.Errorf("unable to parse audio stream bitrate: %v", err)
+				}
 			}
 
 			data.Audio = append(data.Audio, ProbeAudioData{
@@ -125,7 +127,6 @@ type ProbeVideoData struct {
 func ProbeVideo(ctx context.Context, ffprobeBinary string, inputFilePath string) (*ProbeVideoData, error) {
 	args := []string{
 		"-v", "error", // Hide debug information
-		"-ignore_chapters", "1",
 
 		// video
 		"-skip_frame", "nokey",
@@ -210,7 +211,6 @@ type ProbeAudioData struct {
 func ProbeAudio(ctx context.Context, ffprobeBinary string, inputFilePath string) (*ProbeAudioData, error) {
 	args := []string{
 		"-v", "error", // Hide debug information
-		"-ignore_chapters", "1",
 
 		// audio
 		"-show_entries", "stream=duration,bit_rate",
