@@ -35,6 +35,9 @@ type AudioProfile struct {
 // returns a channel, that delivers name of the segments as they are encoded
 func TranscodeSegments(ctx context.Context, ffmpegBinary string, config TranscodeConfig) (chan string, error) {
 	totalSegments := len(config.SegmentTimes)
+	if totalSegments < 2 {
+		return nil, fmt.Errorf("minimum 2 segment times needed")
+	}
 
 	// set time bountary
 	var startAt, endAt float64
@@ -51,7 +54,7 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 			fmt.Sprintf("%.6f", segmentTime),
 		)
 	}
-	commaSeparatedSegTimes := strings.Join(fmtSegTimes[:], ",")
+	commaSeparatedSegTimes := strings.Join(fmtSegTimes[1:], ",")
 
 	args := []string{
 		"-loglevel", "warning",
