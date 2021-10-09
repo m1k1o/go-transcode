@@ -32,6 +32,7 @@ type ManagerCtx struct {
 	probeData       *ProbeMediaData
 	segmentTimes    []float64
 	segmentDuration float64
+	segmentSuffix   string
 
 	shutdown chan struct{}
 	ctx      context.Context
@@ -43,6 +44,9 @@ func New(config Config) *ManagerCtx {
 	return &ManagerCtx{
 		logger: log.With().Str("module", "hlsvod").Str("submodule", "manager").Logger(),
 		config: config,
+
+		segmentDuration: 4.75,
+		segmentSuffix:   "-%05d.ts",
 
 		ctx:    ctx,
 		cancel: cancel,
@@ -122,6 +126,10 @@ func (m *ManagerCtx) Cleanup() {
 	// stop transcoding processes that are not needed anymore
 }
 
+func (m *ManagerCtx) getSegmentName(index int) string {
+	return m.config.SegmentPrefix + fmt.Sprintf(m.segmentSuffix, index)
+}
+
 func (m *ManagerCtx) getPlaylist() string {
 	// playlist prefix
 	playlist := []string{
@@ -136,7 +144,7 @@ func (m *ManagerCtx) getPlaylist() string {
 	for i := 1; i < len(m.segmentTimes); i++ {
 		playlist = append(playlist,
 			fmt.Sprintf("#EXTINF:%.3f, no desc", m.segmentTimes[i]-m.segmentTimes[i-1]),
-			fmt.Sprintf("%s-%05d.ts", m.config.SegmentPrefix, i),
+			m.getSegmentName(i),
 		)
 	}
 
