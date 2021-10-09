@@ -7,9 +7,11 @@ import (
 	"path"
 )
 
+const cacheFileSuffix = ".go-transcode-cache"
+
 func (m *ManagerCtx) getCacheData() ([]byte, error) {
 	// check for local cache
-	localCachePath := fmt.Sprintf("%s.go-transcode-cache", m.config.MediaPath)
+	localCachePath := m.config.MediaPath + cacheFileSuffix
 	if _, err := os.Stat(localCachePath); err == nil {
 		m.logger.Warn().Str("path", localCachePath).Msg("media local cache hit")
 		return os.ReadFile(localCachePath)
@@ -20,7 +22,8 @@ func (m *ManagerCtx) getCacheData() ([]byte, error) {
 	h.Write([]byte(m.config.MediaPath))
 	hash := h.Sum(nil)
 
-	globalCachePath := path.Join(m.config.CacheDir, fmt.Sprintf("%s.go-transcode-cache", hash))
+	fileName := fmt.Sprintf("%x%s", hash, cacheFileSuffix)
+	globalCachePath := path.Join(m.config.CacheDir, fileName)
 	if _, err := os.Stat(globalCachePath); err == nil {
 		m.logger.Warn().Str("path", globalCachePath).Msg("media global cache hit")
 		return os.ReadFile(globalCachePath)
@@ -30,7 +33,7 @@ func (m *ManagerCtx) getCacheData() ([]byte, error) {
 }
 
 func (m *ManagerCtx) saveLocalCacheData(data []byte) error {
-	localCachePath := fmt.Sprintf("%s.go-transcode-cache", m.config.MediaPath)
+	localCachePath := m.config.MediaPath + cacheFileSuffix
 	return os.WriteFile(localCachePath, data, 0755)
 }
 
@@ -39,6 +42,7 @@ func (m *ManagerCtx) saveGlobalCacheData(data []byte) error {
 	h.Write([]byte(m.config.MediaPath))
 	hash := h.Sum(nil)
 
-	globalCachePath := path.Join(m.config.CacheDir, fmt.Sprintf("%s.go-transcode-cache", hash))
+	fileName := fmt.Sprintf("%x%s", hash, cacheFileSuffix)
+	globalCachePath := path.Join(m.config.CacheDir, fileName)
 	return os.WriteFile(globalCachePath, data, 0755)
 }
