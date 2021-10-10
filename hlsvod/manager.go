@@ -295,21 +295,34 @@ func (m *ManagerCtx) Start() (err error) {
 }
 
 func (m *ManagerCtx) Stop() {
+	if !m.ready {
+		return
+	}
+
 	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	// stop all transcoding processes
-	// remove all transcoded segments
-
+	m.ready = false
 	m.cancel()
 	close(m.shutdown)
+	m.mu.Unlock()
 
-	m.ready = false
+	// TODO: stop all transcoding processes
+
+	// remove all transcoded segments
+	for _, segmentName := range m.segments {
+		if segmentName == "" {
+			continue
+		}
+
+		segmentPath := path.Join(m.config.TranscodeDir, segmentName)
+		if err := os.Remove(segmentPath); err != nil {
+			log.Err(err).Str("path", segmentPath).Msg("error while removing file")
+		}
+	}
 }
 
 func (m *ManagerCtx) Cleanup() {
-	// check what segments are really needed
-	// stop transcoding processes that are not needed anymore
+	// TODO: check what segments are really needed
+	// TODO: stop transcoding processes that are not needed anymore
 }
 
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
