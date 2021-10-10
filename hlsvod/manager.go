@@ -289,6 +289,38 @@ func (m *ManagerCtx) clearAllSegments() {
 	}
 }
 
+//
+// segment queue
+//
+
+func (m *ManagerCtx) enqueueSegments(offset, limit int) {
+	m.segmentQueueMu.Lock()
+	defer m.segmentQueueMu.Unlock()
+
+	// create new segment signaling channels queue
+	for i := offset; i < offset+limit; i++ {
+		m.segmentQueue[i] = make(chan struct{}, 1)
+	}
+}
+
+func (m *ManagerCtx) dequeueSegment(index int) {
+	m.segmentQueueMu.Lock()
+	defer m.segmentQueueMu.Unlock()
+
+	if res, ok := m.segmentQueue[index]; ok {
+		close(res)
+		delete(m.segmentQueue, index)
+	}
+}
+
+func (m *ManagerCtx) waitForSegment(index int) (chan struct{}, bool) {
+	m.segmentQueueMu.RLock()
+	defer m.segmentQueueMu.RUnlock()
+
+	res, ok := m.segmentQueue[index]
+	return res, ok
+}
+
 func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
 	logger := log.With().Int("offset", offset).Int("limit", limit).Logger()
 
@@ -313,9 +345,7 @@ func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
 	}
 
 	// create new segment signaling channels queue
-	for i := offset; i < offset+limit; i++ {
-		m.segmentQueue[i] = make(chan struct{}, 1)
-	}
+	m.enqueueSegments(offset, limit)
 
 	index := offset
 	logger.Info().Msg("transcode process started")
@@ -337,10 +367,7 @@ func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
 			m.addSegment(index, segmentName)
 
 			// notify and drop from queue, if exists
-			if res, ok := m.segmentQueue[index]; ok {
-				close(res)
-				delete(m.segmentQueue, index)
-			}
+			m.dequeueSegment(index)
 
 			// expect new segment to come
 			index++
@@ -443,7 +470,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	// check if segment is transcoded
 	if !isTranscoded {
 		// check if segment transcoding is already in progress
-		segChan, ok := m.segmentQueue[index]
+		segChan, ok := m.waitForSegment(index)
 		if !ok {
 			// if transcode proccess could not start
 			if err := m.transcodeSegments(index, 1); err != nil {
@@ -453,7 +480,13 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// after transcode started, segment is queued
-			segChan = m.segmentQueue[index]
+			segChan, ok = m.waitForSegment(index)
+			if !ok {
+				// this should never happen
+				m.logger.Error().Int("index", index).Msg("media not queued even after transcode")
+				http.Error(w, "409 media not queued even after transcode", http.StatusConflict)
+				return
+			}
 		}
 
 		select {
@@ -463,7 +496,8 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 			segmentPath, isTranscoded, ok = m.getSegment(index)
 			if !ok || !isTranscoded {
 				// this should never happen
-				http.Error(w, "404 segment not found even after transcoding", http.StatusNotFound)
+				m.logger.Error().Int("index", index).Msg("segment not found even after transcoding")
+				http.Error(w, "409 segment not found even after transcoding", http.StatusConflict)
 				return
 			}
 		// when transcode stops before getting ready
