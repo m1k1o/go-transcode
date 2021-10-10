@@ -26,7 +26,6 @@ const transcodeTimeout = 10 * time.Second
 
 type ManagerCtx struct {
 	logger zerolog.Logger
-	mu     sync.Mutex
 	config Config
 
 	segmentLength float64
@@ -43,9 +42,8 @@ type ManagerCtx struct {
 
 	segmentWait map[int]chan struct{} // map of segments and signaling channel for finished transcoding
 
-	shutdown chan struct{}
-	ctx      context.Context
-	cancel   context.CancelFunc
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 func New(config Config) *ManagerCtx {
@@ -299,10 +297,8 @@ func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan stru
 }
 
 func (m *ManagerCtx) Start() (err error) {
-	m.mu.Lock()
-	// initialize signaling channels
-	m.shutdown = make(chan struct{})
-	m.mu.Unlock()
+	// create new executing context
+	m.ctx, m.cancel = context.WithCancel(context.Background())
 
 	// initialize ready state
 	m.readyReset()
@@ -330,10 +326,8 @@ func (m *ManagerCtx) Stop() {
 	// reset ready state
 	m.readyReset()
 
-	m.mu.Lock()
+	// cancel current context
 	m.cancel()
-	close(m.shutdown)
-	m.mu.Unlock()
 
 	// TODO: stop all transcoding processes
 
@@ -368,7 +362,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		// when transcode stops before getting ready
-		case <-m.shutdown:
+		case <-m.ctx.Done():
 			m.logger.Warn().Msg("playlist load failed because of shutdown")
 			http.Error(w, "500 playlist not available", http.StatusInternalServerError)
 			return
@@ -428,7 +422,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		// when transcode stops before getting ready
-		case <-m.shutdown:
+		case <-m.ctx.Done():
 			m.logger.Warn().Msg("media transcode failed because of shutdown")
 			http.Error(w, "500 media not available", http.StatusInternalServerError)
 			return
