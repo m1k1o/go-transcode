@@ -35,12 +35,6 @@ type ManagerCtx struct {
 	ready         bool
 	onReadyChange chan struct{}
 
-	events struct {
-		onStart  func()
-		onCmdLog func(message string)
-		onStop   func(err error)
-	}
-
 	metadata    *ProbeMediaData
 	playlist    string         // m3u8 playlist string
 	segments    map[int]string // map of segments and their filename
@@ -414,16 +408,4 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 	w.Header().Set("Cache-Control", "no-cache")
 	http.ServeFile(w, r, segmentPath)
-}
-
-func (m *ManagerCtx) OnStart(event func()) {
-	m.events.onStart = event
-}
-
-func (m *ManagerCtx) OnCmdLog(event func(message string)) {
-	m.events.onCmdLog = event
-}
-
-func (m *ManagerCtx) OnStop(event func(err error)) {
-	m.events.onStop = event
 }
