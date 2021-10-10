@@ -42,8 +42,8 @@ type ManagerCtx struct {
 	segments   map[int]string // map of segments and their filename
 	segmentsMu sync.RWMutex
 
-	segmentWait   map[int]chan struct{} // map of segments and signaling channel for finished transcoding
-	segmentWaitMu sync.RWMutex
+	segmentQueue   map[int]chan struct{} // map of segments and signaling channel for finished transcoding
+	segmentQueueMu sync.RWMutex
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -235,8 +235,8 @@ func (m *ManagerCtx) initialize() {
 		m.segments[i] = ""
 	}
 
-	// prepare segment wait map
-	m.segmentWait = map[int]chan struct{}{}
+	// prepare segment queue map
+	m.segmentQueue = map[int]chan struct{}{}
 
 	log.Info().
 		Int("segments", len(m.segments)).
@@ -289,12 +289,13 @@ func (m *ManagerCtx) clearAllSegments() {
 	}
 }
 
-func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan struct{}, error) {
-	// TODO: Optimize for more segments.
-	segmentTimes := m.breakpoints[index : index+2]
-	log.Info().Int("offset", index).Interface("segments-times", segmentTimes).Msg("transcoding segment")
+func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
+	logger := log.With().Int("offset", offset).Int("limit", limit).Logger()
 
-	data, err := TranscodeSegments(ctx, m.config.FFmpegBinary, TranscodeConfig{
+	segmentTimes := m.breakpoints[offset : offset+limit+1]
+	logger.Info().Interface("segments-times", segmentTimes).Msg("transcoding segments")
+
+	segments, err := TranscodeSegments(m.ctx, m.config.FFmpegBinary, TranscodeConfig{
 		InputFilePath: m.config.MediaPath,
 		OutputDirPath: m.config.TranscodeDir,
 		SegmentPrefix: m.config.SegmentPrefix, // This does not need to match.
@@ -302,29 +303,32 @@ func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan stru
 		VideoProfile: m.config.VideoProfile,
 		AudioProfile: m.config.AudioProfile,
 
-		SegmentOffset: index,
+		SegmentOffset: offset,
 		SegmentTimes:  segmentTimes,
 	})
 
 	if err != nil {
-		log.Err(err).Int("index", index).Msg("error occured while starting to transcode segment")
-		return nil, err
+		logger.Err(err).Msg("error occured while starting to transcode segment")
+		return err
 	}
 
-	response := make(chan struct{}, 1)
-	m.segmentWait[index] = response
+	// create new segment signaling channels queue
+	for i := offset; i < offset+limit; i++ {
+		m.segmentQueue[i] = make(chan struct{}, 1)
+	}
+
+	index := offset
+	logger.Info().Msg("transcode process started")
 
 	go func() {
-		log.Info().Int("index", index).Msg("transcode process started")
-
 		for {
-			segmentName, ok := <-data
+			segmentName, ok := <-segments
 			if !ok {
-				log.Info().Int("index", index).Msg("transcode process finished")
+				logger.Info().Int("index", index).Msg("transcode process finished")
 				return
 			}
 
-			log.Info().
+			logger.Info().
 				Int("index", index).
 				Str("segment", segmentName).
 				Msg("transcode process returned a segment")
@@ -332,10 +336,10 @@ func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan stru
 			// add transcoded segment name
 			m.addSegment(index, segmentName)
 
-			// notify waiting element, if exists
-			if res, ok := m.segmentWait[index]; ok {
+			// notify and drop from queue, if exists
+			if res, ok := m.segmentQueue[index]; ok {
 				close(res)
-				delete(m.segmentWait, index)
+				delete(m.segmentQueue, index)
 			}
 
 			// expect new segment to come
@@ -343,7 +347,7 @@ func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan stru
 		}
 	}()
 
-	return response, nil
+	return nil
 }
 
 func (m *ManagerCtx) Start() (err error) {
@@ -439,17 +443,17 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	// check if segment is transcoded
 	if !isTranscoded {
 		// check if segment transcoding is already in progress
-		segChan, ok := m.segmentWait[index]
+		segChan, ok := m.segmentQueue[index]
 		if !ok {
-			var err error
-			segChan, err = m.transcodeSegment(r.Context(), index)
-
 			// if transcode proccess could not start
-			if err != nil {
+			if err := m.transcodeSegments(index, 1); err != nil {
 				m.logger.Err(err).Int("index", index).Msg("unable to transcode media")
 				http.Error(w, "500 unable to transcode", http.StatusInternalServerError)
 				return
 			}
+
+			// after transcode started, segment is queued
+			segChan = m.segmentQueue[index]
 		}
 
 		select {
