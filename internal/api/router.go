@@ -30,8 +30,13 @@ func (manager *ApiManagerCtx) Start() {
 }
 
 func (manager *ApiManagerCtx) Shutdown() error {
-	// close all hls managers
+	// stop all hls managers
 	for _, hls := range hlsManagers {
+		hls.Stop()
+	}
+
+	// stop all hls vod managers
+	for _, hls := range hlsVodManagers {
 		hls.Stop()
 	}
 
