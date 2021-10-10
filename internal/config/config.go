@@ -50,6 +50,8 @@ type Server struct {
 	BaseDir  string            `yaml:"basedir,omitempty"`
 	Streams  map[string]string `yaml:"streams"`
 	Profiles string            `yaml:"profiles,omitempty"`
+
+	VodDir string
 }
 
 func (Server) Init(cmd *cobra.Command) error {
@@ -88,6 +90,11 @@ func (Server) Init(cmd *cobra.Command) error {
 		return err
 	}
 
+	cmd.PersistentFlags().String("voddir", "", "vod dir")
+	if err := viper.BindPFlag("voddir", cmd.PersistentFlags().Lookup("voddir")); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -114,6 +121,8 @@ func (s *Server) Set() {
 		s.Profiles = fmt.Sprintf("%s/profiles", s.BaseDir)
 	}
 	s.Streams = viper.GetStringMapString("streams")
+
+	s.VodDir = viper.GetString("voddir")
 }
 
 func (s *Server) AbsPath(elem ...string) string {

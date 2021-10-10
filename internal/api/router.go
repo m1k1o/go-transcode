@@ -44,6 +44,11 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 		_, _ = w.Write([]byte("pong"))
 	})
 
+	if a.config.VodDir != "" {
+		r.Group(a.HlsVod)
+		log.Info().Str("vod-dir", a.config.VodDir).Msg("static file transcoding is active")
+	}
+
 	r.Group(a.HLS)
 	r.Group(a.Http)
 }
