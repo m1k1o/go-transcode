@@ -32,8 +32,9 @@ type ManagerCtx struct {
 	segmentLength float64
 	segmentOffset float64
 
-	ready         bool
-	onReadyChange chan struct{}
+	ready     bool
+	readyMu   sync.RWMutex
+	readyChan chan struct{}
 
 	metadata    *ProbeMediaData
 	playlist    string         // m3u8 playlist string
@@ -59,6 +60,43 @@ func New(config Config) *ManagerCtx {
 		ctx:    ctx,
 		cancel: cancel,
 	}
+}
+
+//
+// ready
+//
+
+func (m *ManagerCtx) readyReset() {
+	m.readyMu.Lock()
+	defer m.readyMu.Unlock()
+
+	m.ready = false
+	m.readyChan = make(chan struct{})
+}
+
+func (m *ManagerCtx) readyDone() {
+	m.readyMu.Lock()
+	defer m.readyMu.Unlock()
+
+	m.ready = true
+	if m.readyChan != nil {
+		close(m.readyChan)
+	}
+	m.readyChan = nil
+}
+
+func (m *ManagerCtx) isReady() bool {
+	m.readyMu.RLock()
+	defer m.readyMu.RUnlock()
+
+	return m.ready
+}
+
+func (m *ManagerCtx) waitForReady() chan struct{} {
+	m.readyMu.RLock()
+	defer m.readyMu.RUnlock()
+
+	return m.readyChan
 }
 
 // fetch metadata using ffprobe
@@ -261,16 +299,13 @@ func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan stru
 }
 
 func (m *ManagerCtx) Start() (err error) {
-	if m.ready {
-		return fmt.Errorf("already running")
-	}
-
 	m.mu.Lock()
 	// initialize signaling channels
 	m.shutdown = make(chan struct{})
-	m.ready = false
-	m.onReadyChange = make(chan struct{})
 	m.mu.Unlock()
+
+	// initialize ready state
+	m.readyReset()
 
 	// initialize transcoder asynchronously
 	go func() {
@@ -282,11 +317,8 @@ func (m *ManagerCtx) Start() (err error) {
 		// initialization based on metadata
 		m.initialize()
 
-		m.mu.Lock()
-		// set video to ready state
-		m.ready = true
-		close(m.onReadyChange)
-		m.mu.Unlock()
+		// set ready state as done
+		m.readyDone()
 	}()
 
 	// TODO: Cleanup process.
@@ -295,12 +327,10 @@ func (m *ManagerCtx) Start() (err error) {
 }
 
 func (m *ManagerCtx) Stop() {
-	if !m.ready {
-		return
-	}
+	// reset ready state
+	m.readyReset()
 
 	m.mu.Lock()
-	m.ready = false
 	m.cancel()
 	close(m.shutdown)
 	m.mu.Unlock()
@@ -327,12 +357,12 @@ func (m *ManagerCtx) Cleanup() {
 
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	// ensure that transcode started
-	if !m.ready {
+	if !m.isReady() {
 		select {
 		// waiting for transcode to be ready
-		case <-m.onReadyChange:
+		case <-m.waitForReady():
 			// check if it started succesfully
-			if !m.ready {
+			if !m.isReady() {
 				m.logger.Warn().Msgf("playlist load failed")
 				http.Error(w, "504 playlist not available", http.StatusInternalServerError)
 				return
