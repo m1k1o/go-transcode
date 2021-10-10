@@ -36,11 +36,14 @@ type ManagerCtx struct {
 	readyChan chan struct{}
 
 	metadata    *ProbeMediaData
-	playlist    string         // m3u8 playlist string
-	segments    map[int]string // map of segments and their filename
-	breakpoints []float64      // list of breakpoints for segments
+	playlist    string    // m3u8 playlist string
+	breakpoints []float64 // list of breakpoints for segments
 
-	segmentWait map[int]chan struct{} // map of segments and signaling channel for finished transcoding
+	segments   map[int]string // map of segments and their filename
+	segmentsMu sync.RWMutex
+
+	segmentWait   map[int]chan struct{} // map of segments and signaling channel for finished transcoding
+	segmentWaitMu sync.RWMutex
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -96,6 +99,10 @@ func (m *ManagerCtx) waitForReady() chan struct{} {
 
 	return m.readyChan
 }
+
+//
+// metadata
+//
 
 // fetch metadata using ffprobe
 func (m *ManagerCtx) fetchMetadata() (err error) {
@@ -239,6 +246,49 @@ func (m *ManagerCtx) initialize() {
 		Msg("initialization completed")
 }
 
+//
+// segments
+//
+
+func (m *ManagerCtx) addSegment(index int, segmentName string) {
+	m.segmentsMu.Lock()
+	defer m.segmentsMu.Unlock()
+
+	m.segments[index] = segmentName
+}
+
+func (m *ManagerCtx) getSegment(index int) (segmentPath string, transcoded, ok bool) {
+	var segmentName string
+
+	m.segmentsMu.RLock()
+	segmentName, ok = m.segments[index]
+	m.segmentsMu.RUnlock()
+
+	if !ok {
+		return
+	}
+
+	segmentPath = path.Join(m.config.TranscodeDir, segmentName)
+	transcoded = segmentName != ""
+	return
+}
+
+func (m *ManagerCtx) clearAllSegments() {
+	m.segmentsMu.Lock()
+	defer m.segmentsMu.Unlock()
+
+	for _, segmentName := range m.segments {
+		if segmentName == "" {
+			continue
+		}
+
+		segmentPath := path.Join(m.config.TranscodeDir, segmentName)
+		if err := os.Remove(segmentPath); err != nil {
+			log.Err(err).Str("path", segmentPath).Msg("error while removing file")
+		}
+	}
+}
+
 func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan struct{}, error) {
 	// TODO: Optimize for more segments.
 	segmentTimes := m.breakpoints[index : index+2]
@@ -268,7 +318,7 @@ func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan stru
 		log.Info().Int("index", index).Msg("transcode process started")
 
 		for {
-			segment, ok := <-data
+			segmentName, ok := <-data
 			if !ok {
 				log.Info().Int("index", index).Msg("transcode process finished")
 				return
@@ -276,11 +326,11 @@ func (m *ManagerCtx) transcodeSegment(ctx context.Context, index int) (chan stru
 
 			log.Info().
 				Int("index", index).
-				Str("segment", segment).
+				Str("segment", segmentName).
 				Msg("transcode process returned a segment")
 
-			// save segment to matrix
-			m.segments[index] = segment
+			// add transcoded segment name
+			m.addSegment(index, segmentName)
 
 			// notify waiting element, if exists
 			if res, ok := m.segmentWait[index]; ok {
@@ -332,16 +382,7 @@ func (m *ManagerCtx) Stop() {
 	// TODO: stop all transcoding processes
 
 	// remove all transcoded segments
-	for _, segmentName := range m.segments {
-		if segmentName == "" {
-			continue
-		}
-
-		segmentPath := path.Join(m.config.TranscodeDir, segmentName)
-		if err := os.Remove(segmentPath); err != nil {
-			log.Err(err).Str("path", segmentPath).Msg("error while removing file")
-		}
-	}
+	m.clearAllSegments()
 }
 
 func (m *ManagerCtx) Cleanup() {
@@ -388,15 +429,15 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check if segment has already been transvoded
-	segmentName, ok := m.segments[index]
+	// check if segment exists
+	segmentPath, isTranscoded, ok := m.getSegment(index)
 	if !ok {
 		http.Error(w, "404 index not found", http.StatusNotFound)
 		return
 	}
 
-	// check if media is already transcoded
-	if segmentName == "" {
+	// check if segment is transcoded
+	if !isTranscoded {
 		// check if segment transcoding is already in progress
 		segChan, ok := m.segmentWait[index]
 		if !ok {
@@ -415,8 +456,8 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 		// waiting for new segment to be transcoded
 		case <-segChan:
 			// now segment should be available
-			segmentName, ok = m.segments[index]
-			if !ok {
+			segmentPath, isTranscoded, ok = m.getSegment(index)
+			if !ok || !isTranscoded {
 				// this should never happen
 				http.Error(w, "404 segment not found even after transcoding", http.StatusNotFound)
 				return
@@ -434,7 +475,6 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// build whole segment path
-	segmentPath := path.Join(m.config.TranscodeDir, segmentName)
 	if _, err := os.Stat(segmentPath); os.IsNotExist(err) {
 		m.logger.Warn().Int("index", index).Str("path", segmentPath).Msg("media file not found")
 		http.Error(w, "404 media not found", http.StatusNotFound)
