@@ -1,5 +1,7 @@
 package hlsvod
 
+import "net/http"
+
 type Config struct {
 	MediaPath     string // Transcoded video input.
 	TranscodeDir  string // Temporary directory to store transcoded elements.
@@ -13,4 +15,13 @@ type Config struct {
 
 	FFmpegBinary  string
 	FFprobeBinary string
+}
+
+type Manager interface {
+	Start() error
+	Stop()
+	Cleanup()
+
+	ServePlaylist(w http.ResponseWriter, r *http.Request)
+	ServeMedia(w http.ResponseWriter, r *http.Request)
 }
