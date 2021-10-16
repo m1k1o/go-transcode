@@ -446,8 +446,6 @@ func (m *ManagerCtx) Start() (err error) {
 		m.readyDone()
 	}()
 
-	// TODO: Cleanup process.
-
 	return nil
 }
 
@@ -458,15 +456,8 @@ func (m *ManagerCtx) Stop() {
 	// cancel current context
 	m.cancel()
 
-	// TODO: stop all transcoding processes
-
 	// remove all transcoded segments
 	m.clearAllSegments()
-}
-
-func (m *ManagerCtx) Cleanup() {
-	// TODO: check what segments are really needed
-	// TODO: stop transcoding processes that are not needed anymore
 }
 
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
