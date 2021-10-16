@@ -40,6 +40,27 @@ func (s *Root) Set() {
 	s.CfgFile = viper.GetString("config")
 }
 
+type VideoProfile struct {
+	Width   int `mapstructure:"width"`
+	Height  int `mapstructure:"height"`
+	Bitrate int `mapstructure:"bitrate"` // in kilobytes
+}
+
+type AudioProfile struct {
+	Bitrate int `mapstructure:"bitrate"` // in kilobytes
+}
+
+type VOD struct {
+	MediaDir      string                  `mapstructure:"media-dir"`
+	TranscodeDir  string                  `mapstructure:"transcode-dir"`
+	VideoProfiles map[string]VideoProfile `mapstructure:"video-profiles"`
+	AudioProfile  AudioProfile            `mapstructure:"audio-profile"`
+	Cache         bool                    `mapstructure:"cache"`
+	CacheDir      string                  `mapstructure:"cache-dir"`
+	FFmpegBinary  string                  `mapstructure:"ffmpeg-binary"`
+	FFprobeBinary string                  `mapstructure:"ffprobe-binary"`
+}
+
 type Server struct {
 	Cert   string
 	Key    string
@@ -51,7 +72,7 @@ type Server struct {
 	Streams  map[string]string `yaml:"streams"`
 	Profiles string            `yaml:"profiles,omitempty"`
 
-	VodDir string
+	Vod VOD
 }
 
 func (Server) Init(cmd *cobra.Command) error {
@@ -122,7 +143,34 @@ func (s *Server) Set() {
 	}
 	s.Streams = viper.GetStringMapString("streams")
 
-	s.VodDir = viper.GetString("voddir")
+	//
+	// VOD
+	//
+	if err := viper.UnmarshalKey("vod", &s.Vod); err != nil {
+		panic(err)
+	}
+
+	// defaults
+
+	if s.Vod.TranscodeDir == "" {
+		var err error
+		s.Vod.TranscodeDir, err = os.MkdirTemp(os.TempDir(), "go-transcode-vod")
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if len(s.Vod.VideoProfiles) == 0 {
+		panic("specify at least one VOD video profile")
+	}
+
+	if s.Vod.FFmpegBinary == "" {
+		s.Vod.FFmpegBinary = "ffmpeg"
+	}
+
+	if s.Vod.FFprobeBinary == "" {
+		s.Vod.FFprobeBinary = "ffprobe"
+	}
 }
 
 func (s *Server) AbsPath(elem ...string) string {

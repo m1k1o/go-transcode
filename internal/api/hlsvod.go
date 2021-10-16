@@ -19,8 +19,6 @@ var hlsVodManagers map[string]hlsvod.Manager = make(map[string]hlsvod.Manager)
 func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 	r.Get("/vod/*", func(w http.ResponseWriter, r *http.Request) {
 		logger := log.With().Str("module", "hlsvod").Logger()
-		// TODO: Multi-profile.
-		profile := "default"
 
 		// remove /vod/ from path
 		urlPath := r.URL.Path[5:]
@@ -37,11 +35,39 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 		// everything before last slash is vod media path
 		vodMediaPath := urlPath[:lastSlashIndex]
 
+		// serve master profile
+		if hlsResource == "index.m3u8" {
+			profiles := map[string]hlsvod.VideoProfile{}
+			for name, profile := range a.config.Vod.VideoProfiles {
+				profiles[name] = hlsvod.VideoProfile{
+					Width:   profile.Width,
+					Height:  profile.Height,
+					Bitrate: (profile.Bitrate + a.config.Vod.AudioProfile.Bitrate) / 100 * 105000,
+				}
+			}
+
+			playlist := hlsvod.StreamsPlaylist(profiles, "%s.m3u8")
+			_, _ = w.Write([]byte(playlist))
+			return
+		}
+
+		// get profile name (everythinb before . or -)
+		profileID := strings.FieldsFunc(hlsResource, func(r rune) bool {
+			return r == '.' || r == '-'
+		})[0]
+
+		// check if exists profile and fetch
+		profile, ok := a.config.Vod.VideoProfiles[profileID]
+		if !ok {
+			http.Error(w, "404 profile not found", http.StatusNotFound)
+			return
+		}
+
 		// use clean path
 		vodMediaPath = filepath.Clean(vodMediaPath)
-		vodMediaPath = path.Join(a.config.VodDir, vodMediaPath)
+		vodMediaPath = path.Join(a.config.Vod.MediaDir, vodMediaPath)
 
-		ID := fmt.Sprintf("%s/%s", profile, vodMediaPath)
+		ID := fmt.Sprintf("%s/%s", profileID, vodMediaPath)
 		manager, ok := hlsVodManagers[ID]
 
 		logger.Info().
@@ -51,7 +77,7 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 			Msg("new hls vod request")
 
 		// if found and is not playlist request, server media
-		if ok && hlsResource != profile+".m3u8" {
+		if ok && hlsResource != profileID+".m3u8" {
 			manager.ServeMedia(w, r)
 			return
 		}
@@ -66,27 +92,24 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 
 			// create new manager
 			manager = hlsvod.New(hlsvod.Config{
-				MediaPath: vodMediaPath,
-				// TODO: Move to Config.
-				TranscodeDir:  "bin/out",
-				SegmentPrefix: profile,
+				MediaPath:     vodMediaPath,
+				TranscodeDir:  a.config.Vod.TranscodeDir,
+				SegmentPrefix: profileID,
 
-				// TODO: Move to Config and make dependent on profile.
 				VideoProfile: &hlsvod.VideoProfile{
-					Width:   1280,
-					Height:  720,
-					Bitrate: 4200,
+					Width:   profile.Width,
+					Height:  profile.Height,
+					Bitrate: profile.Bitrate,
 				},
 				AudioProfile: &hlsvod.AudioProfile{
-					Bitrate: 128,
+					Bitrate: a.config.Vod.AudioProfile.Bitrate,
 				},
 
-				// TODO: Move to Config.
-				Cache: true,
+				Cache:    a.config.Vod.Cache,
+				CacheDir: a.config.Vod.CacheDir,
 
-				// TODO: Move to Config.
-				FFmpegBinary:  "ffmpeg",
-				FFprobeBinary: "ffprobe",
+				FFmpegBinary:  a.config.Vod.FFmpegBinary,
+				FFprobeBinary: a.config.Vod.FFprobeBinary,
 			})
 
 			hlsVodManagers[ID] = manager

@@ -12,13 +12,17 @@ This feature is common in media centers (plex, jellyfin) but there was no simple
 
 Sources:
 - [x] Live streams
-- [ ] Static files (basic support)
+- [x] VOD (static files, basic support)
 - [x] Any codec/container supported by ffmpeg
 
-Outputs:
+Live Outputs:
 - [x] Basic MP4 over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]`
 - [x] Basic HLS over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]/index.m3u8`
 - [x] Demo HTML player (for HLS) : `http://go-transcode/[profile]/[stream-id]/play.html`
+
+VOD Outputs:
+- [x] HLS master playlist (h264+aac) : `http://go-transcode/vod/[media-path]/index.m3u8`
+- [x] HLS custom profile (h264+aac) : `http://go-transcode/vod/[media-path]/[profile].m3u8`
 
 Features:
 - [ ] Seeking for static files (index)
@@ -52,13 +56,50 @@ static: /var/www/html
 # TODO: issue #4
 proxy: true
 
+# For live streaming
 streams:
   cam: rtmp://localhost/live/cam
   ch1_hd: http://192.168.1.34:9981/stream/channelid/85
   ch2_hd: http://192.168.1.34:9981/stream/channelid/43
+
+# For static files
+vod:
+  # Source, where are static files, that will be transcoded
+  media-dir: ./media
+  # Temporary transcode output directory, if empty, default tmp folder will be used
+  transcode-dir: ./transcode
+  # Availalbe video profiles
+  video-profiles:
+    360p:
+      width: 640
+      height: 360
+      bitrate: 800
+    540p:
+      width: 960
+      height: 540
+      bitrate: 1800
+    720p:
+      width: 1280
+      height: 720
+      bitrate: 2800
+    1080p:
+      width: 1920
+      height: 1080
+      bitrate: 5000
+  # Single audio profile used
+  audio-profile:
+    bitrate: 192
+  # If cache is enabled
+  cache: true
+  # If empty, cache will be stored in the same directory as media soruce
+  # If not empty, cache files will be saved to specified directory
+  cache-dir: ./cache
+  # Use custom ffmpeg & ffprobe binaries
+  ffmpeg-binary: ffmpeg
+  ffprobe-binary: ffmpeg
 ```
 
-## Transcoding profiles
+## Transcoding profiles for live streams
 
 go-transcode supports any formats that ffmpeg likes. We provide profiles out-of-the-box for h264+aac (mp4 container) for 360p, 540p, 720p and 1080p resolutions: `h264_360p`, `h264_540p`, `h264_720p` and `h264_1080p`. Profiles can have any name, but must match regex: `^[0-9A-Za-z_-]+$`
 
@@ -154,6 +195,7 @@ The source code is in the following files/folders:
 
 - `cmd/` and `main.go`: source for the command-line interface
 - `hls/`: process runner for HLS transcoding
+- `hlsvod/`: process runner for HLS VOD transcoding (for static files)
 - `internal/`: actual source code logic
 
 *TODO: document different modules/packages and dependencies*
