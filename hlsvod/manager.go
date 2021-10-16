@@ -272,7 +272,10 @@ func (m *ManagerCtx) getSegment(index int) (segmentPath string, ok bool) {
 		return
 	}
 
-	segmentPath = path.Join(m.config.TranscodeDir, segmentName)
+	if segmentName != "" {
+		segmentPath = path.Join(m.config.TranscodeDir, segmentName)
+	}
+
 	return
 }
 
