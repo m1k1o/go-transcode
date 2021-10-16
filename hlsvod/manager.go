@@ -28,8 +28,10 @@ type ManagerCtx struct {
 	logger zerolog.Logger
 	config Config
 
-	segmentLength float64
-	segmentOffset float64
+	segmentLength    float64
+	segmentOffset    float64
+	segmentBufferMin int // minimum segments available after playing head
+	segmentBufferMax int // maximum segments to be transcoded at once
 
 	ready     bool
 	readyMu   sync.RWMutex
@@ -55,8 +57,10 @@ func New(config Config) *ManagerCtx {
 		logger: log.With().Str("module", "hlsvod").Str("submodule", "manager").Logger(),
 		config: config,
 
-		segmentLength: 3.50,
-		segmentOffset: 1.25,
+		segmentLength:    3.50,
+		segmentOffset:    1.25,
+		segmentBufferMin: 3,
+		segmentBufferMax: 5,
 
 		ctx:    ctx,
 		cancel: cancel,
@@ -257,7 +261,7 @@ func (m *ManagerCtx) addSegment(index int, segmentName string) {
 	m.segments[index] = segmentName
 }
 
-func (m *ManagerCtx) getSegment(index int) (segmentPath string, transcoded, ok bool) {
+func (m *ManagerCtx) getSegment(index int) (segmentPath string, ok bool) {
 	var segmentName string
 
 	m.segmentsMu.RLock()
@@ -269,8 +273,15 @@ func (m *ManagerCtx) getSegment(index int) (segmentPath string, transcoded, ok b
 	}
 
 	segmentPath = path.Join(m.config.TranscodeDir, segmentName)
-	transcoded = segmentName != ""
 	return
+}
+
+func (m *ManagerCtx) isSegmentTranscoded(index int) bool {
+	m.segmentsMu.RLock()
+	segmentName, ok := m.segments[index]
+	m.segmentsMu.RUnlock()
+
+	return ok && segmentName != ""
 }
 
 func (m *ManagerCtx) clearAllSegments() {
@@ -377,6 +388,40 @@ func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
 	return nil
 }
 
+func (m *ManagerCtx) transcodeFromSegment(index int) error {
+	segmentsTotal := len(m.segments)
+	if index+m.segmentBufferMax < segmentsTotal {
+		segmentsTotal = index + m.segmentBufferMax
+	}
+
+	offset, limit := 0, 0
+	for i := index; i < segmentsTotal; i++ {
+		_, isEnqueued := m.waitForSegment(i)
+		isTranscoded := m.isSegmentTranscoded(i)
+
+		// increase offset if transcoded without limit
+		if (isTranscoded || isEnqueued) && limit == 0 {
+			offset++
+		} else
+		// increase limit if is not transcoded
+		if !(isTranscoded || isEnqueued) {
+			limit++
+		} else
+		// break otherwise
+		{
+			break
+		}
+	}
+
+	// if offset is greater than our minimal offset, we have enough segments available
+	if offset > m.segmentBufferMin {
+		return nil
+	}
+
+	// otherwise transcode chosen segment range
+	return m.transcodeSegments(offset+index, limit)
+}
+
 func (m *ManagerCtx) Start() (err error) {
 	// create new executing context
 	m.ctx, m.cancel = context.WithCancel(context.Background())
@@ -461,40 +506,36 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check if segment exists
-	segmentPath, isTranscoded, ok := m.getSegment(index)
+	segmentPath, ok := m.getSegment(index)
 	if !ok {
 		http.Error(w, "404 index not found", http.StatusNotFound)
 		return
 	}
 
+	// try to transcode from current segment
+	if err := m.transcodeFromSegment(index); err != nil {
+		m.logger.Err(err).Int("index", index).Msg("unable to transcode media")
+		http.Error(w, "500 unable to transcode", http.StatusInternalServerError)
+		return
+	}
+
 	// check if segment is transcoded
-	if !isTranscoded {
+	if !m.isSegmentTranscoded(index) {
 		// check if segment transcoding is already in progress
 		segChan, ok := m.waitForSegment(index)
 		if !ok {
-			// if transcode proccess could not start
-			if err := m.transcodeSegments(index, 1); err != nil {
-				m.logger.Err(err).Int("index", index).Msg("unable to transcode media")
-				http.Error(w, "500 unable to transcode", http.StatusInternalServerError)
-				return
-			}
-
-			// after transcode started, segment is queued
-			segChan, ok = m.waitForSegment(index)
-			if !ok {
-				// this should never happen
-				m.logger.Error().Int("index", index).Msg("media not queued even after transcode")
-				http.Error(w, "409 media not queued even after transcode", http.StatusConflict)
-				return
-			}
+			// this should never happen
+			m.logger.Error().Int("index", index).Msg("media not queued even after transcode")
+			http.Error(w, "409 media not queued even after transcode", http.StatusConflict)
+			return
 		}
 
 		select {
 		// waiting for new segment to be transcoded
 		case <-segChan:
 			// now segment should be available
-			segmentPath, isTranscoded, ok = m.getSegment(index)
-			if !ok || !isTranscoded {
+			segmentPath, ok = m.getSegment(index)
+			if !ok || segmentPath == "" {
 				// this should never happen
 				m.logger.Error().Int("index", index).Msg("segment not found even after transcoding")
 				http.Error(w, "409 segment not found even after transcoding", http.StatusConflict)
@@ -512,7 +553,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// build whole segment path
+	// check if segment is on the disk
 	if _, err := os.Stat(segmentPath); os.IsNotExist(err) {
 		m.logger.Warn().Int("index", index).Str("path", segmentPath).Msg("media file not found")
 		http.Error(w, "404 media not found", http.StatusNotFound)
