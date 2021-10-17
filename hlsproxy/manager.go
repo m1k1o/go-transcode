@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/m1k1o/go-transcode/internal/utils"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -25,7 +27,7 @@ type ManagerCtx struct {
 	baseUrl string
 	prefix  string
 
-	cache   map[string]*CacheWriter
+	cache   map[string]*utils.Cache
 	cacheMu sync.RWMutex
 
 	shutdown chan struct{}
@@ -40,7 +42,7 @@ func New(baseUrl string, prefix string) *ManagerCtx {
 		logger:   log.With().Str("module", "hlsproxy").Str("submodule", "manager").Logger(),
 		baseUrl:  baseUrl,
 		prefix:   prefix,
-		cache:    map[string]*CacheWriter{},
+		cache:    map[string]*utils.Cache{},
 		shutdown: make(chan struct{}),
 	}
 }
@@ -80,62 +82,68 @@ func (m *ManagerCtx) Stop() {
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	url := m.baseUrl + strings.TrimPrefix(r.URL.String(), m.prefix)
 
-	reader, ok := m.getFromCache(url)
-	if ok {
-		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
-		w.WriteHeader(200)
-		io.Copy(w, reader)
-		return
-	}
+	cache, ok := m.getFromCache(url)
+	if !ok {
+		resp, err := http.Get(url)
+		if err != nil {
+			log.Err(err).Msg("unable to get HTTP")
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+		defer resp.Body.Close()
 
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Err(err).Msg("unable to get HTTP")
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
+		if resp.StatusCode < 200 && resp.StatusCode >= 300 {
+			defer resp.Body.Close()
 
-	buf, err := io.ReadAll(resp.Body)
-	if err != nil {
-		log.Err(err).Msg("unadle to read response body")
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
+			log.Err(err).Int("code", resp.StatusCode).Msg("invalid HTTP response")
+			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
+			return
+		}
 
-	var re = regexp.MustCompile(`(?m:^(https?\:\/\/[^\/]+)?\/)`)
-	text := re.ReplaceAllString(string(buf), m.prefix)
+		buf, err := io.ReadAll(resp.Body)
+		if err != nil {
+			log.Err(err).Msg("unadle to read response body")
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
+
+		var re = regexp.MustCompile(`(?m:^(https?\:\/\/[^\/]+)?\/)`)
+		text := re.ReplaceAllString(string(buf), m.prefix)
+
+		cache = m.saveToCache(url, strings.NewReader(text), playlistExpiration)
+	}
 
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
-	w.WriteHeader(resp.StatusCode)
+	w.WriteHeader(200)
 
-	newBody := strings.NewReader(text)
-	reader = m.saveToCache(url, newBody, playlistExpiration)
-	io.Copy(w, reader)
+	cache.ServeHTTP(w)
 }
 
 func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	url := m.baseUrl + strings.TrimPrefix(r.URL.String(), m.prefix)
 
-	reader, ok := m.getFromCache(url)
-	if ok {
-		w.Header().Set("Content-Type", "video/MP2T")
-		w.WriteHeader(200)
-		io.Copy(w, reader)
-		return
-	}
+	cache, ok := m.getFromCache(url)
+	if !ok {
+		resp, err := http.Get(url)
+		if err != nil {
+			log.Err(err).Msg("unable to get HTTP")
+			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+			return
+		}
 
-	resp, err := http.Get(url)
-	if err != nil {
-		log.Err(err).Msg("unable to get HTTP")
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
+		if resp.StatusCode < 200 && resp.StatusCode >= 300 {
+			defer resp.Body.Close()
+
+			log.Err(err).Int("code", resp.StatusCode).Msg("invalid HTTP response")
+			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
+			return
+		}
+
+		cache = m.saveToCache(url, resp.Body, segmentExpiration)
 	}
-	defer resp.Body.Close()
 
 	w.Header().Set("Content-Type", "video/MP2T")
-	w.WriteHeader(resp.StatusCode)
+	w.WriteHeader(200)
 
-	reader = m.saveToCache(url, resp.Body, segmentExpiration)
-	io.Copy(w, reader)
+	cache.ServeHTTP(w)
 }
