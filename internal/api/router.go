@@ -44,6 +44,11 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 		_, _ = w.Write([]byte("pong"))
 	})
 
+	if len(a.config.HlsProxy) > 0 {
+		r.Group(a.HLSProxy)
+		log.Info().Interface("hls-proxy", a.config.HlsProxy).Msg("hls proxy is active")
+	}
+
 	r.Group(a.HLS)
 	r.Group(a.Http)
 }

@@ -50,6 +50,8 @@ type Server struct {
 	BaseDir  string            `yaml:"basedir,omitempty"`
 	Streams  map[string]string `yaml:"streams"`
 	Profiles string            `yaml:"profiles,omitempty"`
+
+	HlsProxy map[string]string
 }
 
 func (Server) Init(cmd *cobra.Command) error {
@@ -114,6 +116,8 @@ func (s *Server) Set() {
 		s.Profiles = fmt.Sprintf("%s/profiles", s.BaseDir)
 	}
 	s.Streams = viper.GetStringMapString("streams")
+
+	s.HlsProxy = viper.GetStringMapString("hls-proxy")
 }
 
 func (s *Server) AbsPath(elem ...string) string {
