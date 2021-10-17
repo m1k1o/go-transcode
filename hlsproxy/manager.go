@@ -19,18 +19,13 @@ const segmentExpiration = 60 * time.Second
 
 const playlistExpiration = 1 * time.Second
 
-type Cache struct {
-	Data    []byte
-	Expires time.Time
-}
-
 type ManagerCtx struct {
 	logger  zerolog.Logger
 	mu      sync.Mutex
 	baseUrl string
 	prefix  string
 
-	cache   map[string]Cache
+	cache   map[string]*CacheWriter
 	cacheMu sync.RWMutex
 
 	shutdown chan struct{}
@@ -45,7 +40,7 @@ func New(baseUrl string, prefix string) *ManagerCtx {
 		logger:   log.With().Str("module", "hlsproxy").Str("submodule", "manager").Logger(),
 		baseUrl:  baseUrl,
 		prefix:   prefix,
-		cache:    map[string]Cache{},
+		cache:    map[string]*CacheWriter{},
 		shutdown: make(chan struct{}),
 	}
 }
@@ -85,9 +80,11 @@ func (m *ManagerCtx) Stop() {
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	url := m.baseUrl + strings.TrimPrefix(r.URL.String(), m.prefix)
 
-	body, ok := m.getFromCache(url)
+	reader, ok := m.getFromCache(url)
 	if ok {
-		w.Write(body)
+		w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+		w.WriteHeader(200)
+		io.Copy(w, reader)
 		return
 	}
 
@@ -112,16 +109,19 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 	w.WriteHeader(resp.StatusCode)
 
-	m.saveToCache(url, body, playlistExpiration)
-	w.Write([]byte(text))
+	newBody := strings.NewReader(text)
+	reader = m.saveToCache(url, newBody, playlistExpiration)
+	io.Copy(w, reader)
 }
 
 func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	url := m.baseUrl + strings.TrimPrefix(r.URL.String(), m.prefix)
 
-	body, ok := m.getFromCache(url)
+	reader, ok := m.getFromCache(url)
 	if ok {
-		w.Write(body)
+		w.Header().Set("Content-Type", "video/MP2T")
+		w.WriteHeader(200)
+		io.Copy(w, reader)
 		return
 	}
 
@@ -133,16 +133,9 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	}
 	defer resp.Body.Close()
 
-	body, err = io.ReadAll(resp.Body)
-	if err != nil {
-		log.Err(err).Msg("unadle to read response body")
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
 	w.Header().Set("Content-Type", "video/MP2T")
 	w.WriteHeader(resp.StatusCode)
 
-	m.saveToCache(url, body, segmentExpiration)
-	w.Write(body)
+	reader = m.saveToCache(url, resp.Body, segmentExpiration)
+	io.Copy(w, reader)
 }
