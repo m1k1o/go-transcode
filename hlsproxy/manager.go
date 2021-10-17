@@ -64,7 +64,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var re = regexp.MustCompile(`^(https?\:\/\/[^\/]+)?\/`)
+	var re = regexp.MustCompile(`(?m:^(https?\:\/\/[^\/]+)?\/)`)
 	text := re.ReplaceAllString(string(buf), m.prefix)
 
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
