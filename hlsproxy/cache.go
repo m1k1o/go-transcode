@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/m1k1o/go-transcode/internal/utils"
-	"github.com/rs/zerolog/log"
 )
 
 func (m *ManagerCtx) getFromCache(key string) (*utils.Cache, bool) {
@@ -15,7 +14,7 @@ func (m *ManagerCtx) getFromCache(key string) (*utils.Cache, bool) {
 
 	// on cache miss
 	if !ok {
-		log.Warn().Str("key", key).Msg("cache miss")
+		m.logger.Debug().Str("key", key).Msg("cache miss")
 		return nil, false
 	}
 
@@ -26,13 +25,11 @@ func (m *ManagerCtx) getFromCache(key string) (*utils.Cache, bool) {
 	}
 
 	// cache hit
-	log.Info().Str("key", key).Msg("cache hit !!!!")
+	m.logger.Debug().Str("key", key).Msg("cache hit")
 	return entry, true
 }
 
 func (m *ManagerCtx) saveToCache(key string, reader io.Reader, duration time.Duration) *utils.Cache {
-	log.Info().Str("key", key).Msg("cache add ++++")
-
 	m.cacheMu.Lock()
 	cache := utils.NewCache(time.Now().Add(duration))
 	m.cache[key] = cache
@@ -43,7 +40,9 @@ func (m *ManagerCtx) saveToCache(key string, reader io.Reader, duration time.Dur
 		defer cache.Close()
 
 		_, err := io.Copy(cache, reader)
-		log.Err(err).Msg("copied to cache")
+		if err != nil {
+			m.logger.Err(err).Msg("error while copying to cache")
+		}
 
 		// close reader, if it needs to be closed
 		if closer, ok := reader.(io.ReadCloser); ok {
@@ -59,7 +58,6 @@ func (m *ManagerCtx) removeFromCache(key string) {
 	defer m.cacheMu.Unlock()
 
 	delete(m.cache, key)
-	log.Info().Str("key", key).Msg("cache remove ----")
 }
 
 func (m *ManagerCtx) clearCache() {
@@ -70,7 +68,7 @@ func (m *ManagerCtx) clearCache() {
 	for key, entry := range m.cache {
 		if time.Now().After(entry.Expires) {
 			delete(m.cache, key)
-			log.Info().Str("key", key).Msg("cache cleanup remove expired")
+			m.logger.Debug().Str("key", key).Msg("cache cleanup remove expired")
 		}
 	}
 }
