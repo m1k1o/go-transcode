@@ -75,7 +75,11 @@ func (c *Cache) ServeHTTP(w http.ResponseWriter) {
 
 		// if we have enough available data
 		if offset < length {
-			i, _ := w.Write(c.chunks[index])
+			c.mu.RLock()
+			chunk := c.chunks[index]
+			c.mu.RUnlock()
+
+			i, _ := w.Write(chunk)
 			offset += i
 			index++
 			continue
