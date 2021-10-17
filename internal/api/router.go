@@ -35,6 +35,11 @@ func (manager *ApiManagerCtx) Shutdown() error {
 		hls.Stop()
 	}
 
+	// stop all hls proxy managers
+	for _, hls := range hlsProxyManagers {
+		hls.Stop()
+	}
+
 	return nil
 }
 
