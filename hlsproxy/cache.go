@@ -20,7 +20,6 @@ func (m *ManagerCtx) getFromCache(key string) (*utils.Cache, bool) {
 
 	// if cache has expired
 	if time.Now().After(entry.Expires) {
-		m.removeFromCache(key)
 		return nil, false
 	}
 
@@ -50,25 +49,73 @@ func (m *ManagerCtx) saveToCache(key string, reader io.Reader, duration time.Dur
 		}
 	}()
 
+	// start periodic cleanup if not running
+	m.cleanupStart()
+
 	return cache
 }
 
-func (m *ManagerCtx) removeFromCache(key string) {
-	m.cacheMu.Lock()
-	defer m.cacheMu.Unlock()
-
-	delete(m.cache, key)
-}
-
 func (m *ManagerCtx) clearCache() {
-	m.cacheMu.Lock()
-	defer m.cacheMu.Unlock()
+	cacheSize := 0
 
-	// remove expired entries
+	m.cacheMu.Lock()
 	for key, entry := range m.cache {
+		// remove expired entries
 		if time.Now().After(entry.Expires) {
 			delete(m.cache, key)
 			m.logger.Debug().Str("key", key).Msg("cache cleanup remove expired")
+		} else {
+			cacheSize++
 		}
 	}
+	m.cacheMu.Unlock()
+
+	if cacheSize == 0 {
+		m.cleanupStop()
+	}
+}
+
+func (m *ManagerCtx) cleanupStart() {
+	m.cleanupMu.Lock()
+	defer m.cleanupMu.Unlock()
+
+	// if already running
+	if m.cleanup {
+		return
+	}
+
+	m.shutdown = make(chan struct{})
+	m.cleanup = true
+
+	go func() {
+		m.logger.Debug().Msg("cleanup started")
+
+		ticker := time.NewTicker(cacheCleanupPeriod)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-m.shutdown:
+				return
+			case <-ticker.C:
+				m.logger.Debug().Msg("performing cleanup")
+				m.clearCache()
+			}
+		}
+	}()
+}
+
+func (m *ManagerCtx) cleanupStop() {
+	m.cleanupMu.Lock()
+	defer m.cleanupMu.Unlock()
+
+	// if not running
+	if !m.cleanup {
+		return
+	}
+
+	m.cleanup = false
+	close(m.shutdown)
+
+	m.logger.Debug().Msg("cleanup stopped")
 }

@@ -3,8 +3,7 @@ package hlsproxy
 import "net/http"
 
 type Manager interface {
-	Start() error
-	Stop()
+	Shutdown()
 
 	ServePlaylist(w http.ResponseWriter, r *http.Request)
 	ServeMedia(w http.ResponseWriter, r *http.Request)

@@ -23,14 +23,15 @@ const playlistExpiration = 1 * time.Second
 
 type ManagerCtx struct {
 	logger  zerolog.Logger
-	mu      sync.Mutex
 	baseUrl string
 	prefix  string
 
 	cache   map[string]*utils.Cache
 	cacheMu sync.RWMutex
 
-	shutdown chan struct{}
+	cleanup   bool
+	cleanupMu sync.RWMutex
+	shutdown  chan struct{}
 }
 
 func New(baseUrl string, prefix string) *ManagerCtx {
@@ -39,44 +40,15 @@ func New(baseUrl string, prefix string) *ManagerCtx {
 	baseUrl += "/"
 
 	return &ManagerCtx{
-		logger:   log.With().Str("module", "hlsproxy").Str("submodule", "manager").Logger(),
-		baseUrl:  baseUrl,
-		prefix:   prefix,
-		cache:    map[string]*utils.Cache{},
-		shutdown: make(chan struct{}),
+		logger:  log.With().Str("module", "hlsproxy").Str("submodule", "manager").Logger(),
+		baseUrl: baseUrl,
+		prefix:  prefix,
+		cache:   map[string]*utils.Cache{},
 	}
 }
 
-func (m *ManagerCtx) Start() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.shutdown = make(chan struct{})
-
-	// periodic cleanup
-	go func() {
-		ticker := time.NewTicker(cacheCleanupPeriod)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-m.shutdown:
-				return
-			case <-ticker.C:
-				m.logger.Debug().Msg("performing cleanup")
-				m.clearCache()
-			}
-		}
-	}()
-
-	return nil
-}
-
-func (m *ManagerCtx) Stop() {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	close(m.shutdown)
+func (m *ManagerCtx) Shutdown() {
+	m.cleanupStop()
 }
 
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
