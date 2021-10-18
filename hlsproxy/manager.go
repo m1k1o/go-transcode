@@ -17,8 +17,10 @@ import (
 // how often should be cache cleanup called
 const cacheCleanupPeriod = 4 * time.Second
 
+// how long should be segment kept in memory
 const segmentExpiration = 60 * time.Second
 
+// how long should be playlist kept in memory
 const playlistExpiration = 1 * time.Second
 
 type ManagerCtx struct {
