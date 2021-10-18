@@ -19,6 +19,7 @@ Outputs:
 - [x] Basic MP4 over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]`
 - [x] Basic HLS over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]/index.m3u8`
 - [x] Demo HTML player (for HLS) : `http://go-transcode/[profile]/[stream-id]/play.html`
+- [x] HLS proxy : `http://go-transcode/hlsproxy/[hls-proxy-id]/[original-request]`
 
 Features:
 - [ ] Seeking for static files (index)
@@ -56,6 +57,11 @@ streams:
   cam: rtmp://localhost/live/cam
   ch1_hd: http://192.168.1.34:9981/stream/channelid/85
   ch2_hd: http://192.168.1.34:9981/stream/channelid/43
+
+# For proxying HLS streams
+hls-proxy:
+  my_server: http://192.168.1.34:9981
+
 ```
 
 ## Transcoding profiles

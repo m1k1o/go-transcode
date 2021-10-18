@@ -35,6 +35,11 @@ func (manager *ApiManagerCtx) Shutdown() error {
 		hls.Stop()
 	}
 
+	// shutdown all hls proxy managers
+	for _, hls := range hlsProxyManagers {
+		hls.Shutdown()
+	}
+
 	return nil
 }
 
@@ -43,6 +48,11 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 		//nolint
 		_, _ = w.Write([]byte("pong"))
 	})
+
+	if len(a.config.HlsProxy) > 0 {
+		r.Group(a.HLSProxy)
+		log.Info().Interface("hls-proxy", a.config.HlsProxy).Msg("hls proxy is active")
+	}
 
 	r.Group(a.HLS)
 	r.Group(a.Http)
