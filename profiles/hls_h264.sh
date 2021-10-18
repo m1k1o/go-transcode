@@ -51,6 +51,7 @@ exec ffmpeg -hide_banner -loglevel warning \
     -hls_list_size 5 \
     -hls_wrap 10 \
     -hls_delete_threshold 1 \
-    -hls_flags delete_segments \
+    -hls_flags delete_segments+second_level_segment_index \
     -hls_start_number_source datetime \
-    -hls_segment_filename "live_%03d.ts" -
+    -strftime 1 \
+    -hls_segment_filename "live_%Y%m%d%H%M%S_%%03d.ts" -
