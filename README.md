@@ -19,6 +19,7 @@ Live Outputs:
 - [x] Basic MP4 over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]`
 - [x] Basic HLS over HTTP (h264+aac) : `http://go-transcode/[profile]/[stream-id]/index.m3u8`
 - [x] Demo HTML player (for HLS) : `http://go-transcode/[profile]/[stream-id]/play.html`
+- [x] HLS proxy : `http://go-transcode/hlsproxy/[hls-proxy-id]/[original-request]`
 
 VOD Outputs:
 - [x] HLS master playlist (h264+aac) : `http://go-transcode/vod/[media-path]/index.m3u8`
@@ -97,6 +98,10 @@ vod:
   # Use custom ffmpeg & ffprobe binaries
   ffmpeg-binary: ffmpeg
   ffprobe-binary: ffmpeg
+
+# For proxying HLS streams
+hls-proxy:
+  my_server: http://192.168.1.34:9981
 ```
 
 ## Transcoding profiles for live streams

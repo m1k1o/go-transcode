@@ -72,7 +72,8 @@ type Server struct {
 	Streams  map[string]string `yaml:"streams"`
 	Profiles string            `yaml:"profiles,omitempty"`
 
-	Vod VOD
+	Vod      VOD
+	HlsProxy map[string]string
 }
 
 func (Server) Init(cmd *cobra.Command) error {
@@ -171,6 +172,11 @@ func (s *Server) Set() {
 	if s.Vod.FFprobeBinary == "" {
 		s.Vod.FFprobeBinary = "ffprobe"
 	}
+
+	//
+	// HLS PROXY
+	//
+	s.HlsProxy = viper.GetStringMapString("hls-proxy")
 }
 
 func (s *Server) AbsPath(elem ...string) string {

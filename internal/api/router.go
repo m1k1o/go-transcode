@@ -40,6 +40,11 @@ func (manager *ApiManagerCtx) Shutdown() error {
 		hls.Stop()
 	}
 
+	// shutdown all hls proxy managers
+	for _, hls := range hlsProxyManagers {
+		hls.Shutdown()
+	}
+
 	return nil
 }
 
@@ -52,6 +57,11 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 	if a.config.Vod.MediaDir != "" {
 		r.Group(a.HlsVod)
 		log.Info().Str("vod-dir", a.config.Vod.MediaDir).Msg("static file transcoding is active")
+	}
+
+	if len(a.config.HlsProxy) > 0 {
+		r.Group(a.HLSProxy)
+		log.Info().Interface("hls-proxy", a.config.HlsProxy).Msg("hls proxy is active")
 	}
 
 	r.Group(a.HLS)
