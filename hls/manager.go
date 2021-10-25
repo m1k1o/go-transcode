@@ -205,11 +205,11 @@ func (m *ManagerCtx) Stop() {
 		pgid, err := syscall.Getpgid(m.cmd.Process.Pid)
 		if err == nil {
 			err := syscall.Kill(-pgid, syscall.SIGKILL)
-			m.logger.Err(err).Msg("killing proccess group")
+			m.logger.Err(err).Msg("killing process group")
 		} else {
-			m.logger.Err(err).Msg("could not get proccess group id")
+			m.logger.Err(err).Msg("could not get process group id")
 			err := m.cmd.Process.Kill()
-			m.logger.Err(err).Msg("killing proccess")
+			m.logger.Err(err).Msg("killing process")
 		}
 	}
 }
