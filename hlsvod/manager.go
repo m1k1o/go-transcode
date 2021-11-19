@@ -109,12 +109,12 @@ func (m *ManagerCtx) waitForReady() chan struct{} {
 //
 
 // fetch metadata using ffprobe
-func (m *ManagerCtx) fetchMetadata() (err error) {
+func (m *ManagerCtx) fetchMetadata(ctx context.Context) (err error) {
 	start := time.Now()
 	log.Info().Msg("fetching metadata")
 
 	// start ffprobe to get metadata about current media
-	m.metadata, err = ProbeMedia(m.ctx, m.config.FFprobeBinary, m.config.MediaPath)
+	m.metadata, err = ProbeMedia(ctx, m.config.FFprobeBinary, m.config.MediaPath)
 	if err != nil {
 		return fmt.Errorf("unable probe media for metadata: %v", err)
 	}
@@ -122,7 +122,7 @@ func (m *ManagerCtx) fetchMetadata() (err error) {
 	// if media has video, use keyframes as reference for segments if allowed so
 	if m.metadata.Video != nil && m.metadata.Video.PktPtsTime == nil && m.config.VideoKeyframes {
 		// start ffprobe to get keyframes from video
-		videoData, err := ProbeVideo(m.ctx, m.config.FFprobeBinary, m.config.MediaPath)
+		videoData, err := ProbeVideo(ctx, m.config.FFprobeBinary, m.config.MediaPath)
 		if err != nil {
 			return fmt.Errorf("unable probe video for keyframes: %v", err)
 		}
@@ -135,10 +135,10 @@ func (m *ManagerCtx) fetchMetadata() (err error) {
 }
 
 // load metadata from cache or fetch them and cache
-func (m *ManagerCtx) loadMetadata() error {
+func (m *ManagerCtx) loadMetadata(ctx context.Context) error {
 	// bypass cache if not enabled
 	if !m.config.Cache {
-		return m.fetchMetadata()
+		return m.fetchMetadata(ctx)
 	}
 
 	// try to get cached data
@@ -156,7 +156,7 @@ func (m *ManagerCtx) loadMetadata() error {
 	}
 
 	// fetch fresh metadata from a file
-	if err := m.fetchMetadata(); err != nil {
+	if err := m.fetchMetadata(ctx); err != nil {
 		return err
 	}
 
@@ -434,7 +434,7 @@ func (m *ManagerCtx) Start() (err error) {
 
 	// initialize transcoder asynchronously
 	go func() {
-		if err := m.loadMetadata(); err != nil {
+		if err := m.loadMetadata(m.ctx); err != nil {
 			log.Printf("%v\n", err)
 			return
 		}
@@ -458,6 +458,14 @@ func (m *ManagerCtx) Stop() {
 
 	// remove all transcoded segments
 	m.clearAllSegments()
+}
+
+func (m *ManagerCtx) Preload(ctx context.Context) error {
+	if !m.config.Cache {
+		return fmt.Errorf("cache not enabled")
+	}
+
+	return m.loadMetadata(ctx)
 }
 
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {

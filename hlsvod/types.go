@@ -1,6 +1,9 @@
 package hlsvod
 
-import "net/http"
+import (
+	"context"
+	"net/http"
+)
 
 type Config struct {
 	MediaPath     string // Transcoded video input.
@@ -21,6 +24,7 @@ type Config struct {
 type Manager interface {
 	Start() error
 	Stop()
+	Preload(ctx context.Context) error
 
 	ServePlaylist(w http.ResponseWriter, r *http.Request)
 	ServeMedia(w http.ResponseWriter, r *http.Request)
