@@ -117,6 +117,7 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 			// create own transcoding directory
 			transcodeDir, err := os.MkdirTemp(a.config.Vod.TranscodeDir, fmt.Sprintf("vod-%s-*", profileID))
 			if err != nil {
+				logger.Err(err)
 				http.Error(w, "500 could not create temp dir", http.StatusInternalServerError)
 				return
 			}
@@ -146,6 +147,7 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 			hlsVodManagers[ID] = manager
 
 			if err := manager.Start(); err != nil {
+				logger.Err(err)
 				http.Error(w, "500 hls vod manager could not be started", http.StatusInternalServerError)
 				return
 			}
