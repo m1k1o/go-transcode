@@ -3,6 +3,7 @@ package hlsvod
 import (
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 )
@@ -57,15 +58,35 @@ func convertToSegments(rawTimeList []float64, duration time.Duration, segmentLen
 }
 
 func StreamsPlaylist(profiles map[string]VideoProfile, segmentNameFmt string) string {
+	layers := []struct {
+		Bitrate int
+		Entries []string
+	}{}
+
+	for name, profile := range profiles {
+		layers = append(layers, struct {
+			Bitrate int
+			Entries []string
+		}{
+			profile.Bitrate,
+			[]string{
+				fmt.Sprintf("#EXT-X-STREAM-INF:BANDWIDTH=%d,RESOLUTION=%dx%d,NAME=%s", profile.Bitrate, profile.Width, profile.Height, name),
+				fmt.Sprintf(segmentNameFmt, name),
+			},
+		})
+	}
+
+	// sort by bitrate
+	sort.Slice(layers, func(i, j int) bool {
+		return layers[i].Bitrate < layers[j].Bitrate
+	})
+
 	// playlist prefix
 	playlist := []string{"#EXTM3U"}
 
 	// playlist segments
-	for name, profile := range profiles {
-		playlist = append(playlist,
-			fmt.Sprintf("#EXT-X-STREAM-INF:BANDWIDTH=%d,RESOLUTION=%dx%d,NAME=%s", profile.Bitrate, profile.Width, profile.Height, name),
-			fmt.Sprintf(segmentNameFmt, name),
-		)
+	for _, profile := range layers {
+		playlist = append(playlist, profile.Entries...)
 	}
 
 	// join with newlines
