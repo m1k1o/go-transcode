@@ -30,8 +30,13 @@ func (manager *ApiManagerCtx) Start() {
 }
 
 func (manager *ApiManagerCtx) Shutdown() error {
-	// close all hls managers
+	// stop all hls managers
 	for _, hls := range hlsManagers {
+		hls.Stop()
+	}
+
+	// stop all hls vod managers
+	for _, hls := range hlsVodManagers {
 		hls.Stop()
 	}
 
@@ -48,6 +53,11 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 		//nolint
 		_, _ = w.Write([]byte("pong"))
 	})
+
+	if a.config.Vod.MediaDir != "" {
+		r.Group(a.HlsVod)
+		log.Info().Str("vod-dir", a.config.Vod.MediaDir).Msg("static file transcoding is active")
+	}
 
 	if len(a.config.HlsProxy) > 0 {
 		r.Group(a.HLSProxy)
