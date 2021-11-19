@@ -90,10 +90,17 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 				return
 			}
 
+			// create own transcoding directory
+			transcodeDir, err := os.MkdirTemp(a.config.Vod.TranscodeDir, fmt.Sprintf("vod-%s-*", profileID))
+			if err != nil {
+				http.Error(w, "500 could not create temp dir", http.StatusInternalServerError)
+				return
+			}
+
 			// create new manager
 			manager = hlsvod.New(hlsvod.Config{
 				MediaPath:     vodMediaPath,
-				TranscodeDir:  a.config.Vod.TranscodeDir,
+				TranscodeDir:  transcodeDir,
 				SegmentPrefix: profileID,
 
 				VideoProfile: &hlsvod.VideoProfile{
