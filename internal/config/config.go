@@ -154,6 +154,11 @@ func (s *Server) Set() {
 		if err != nil {
 			panic(err)
 		}
+	} else {
+		err := os.MkdirAll(s.Vod.TranscodeDir, 0755)
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	if len(s.Vod.VideoProfiles) == 0 {
