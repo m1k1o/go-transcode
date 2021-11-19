@@ -460,12 +460,12 @@ func (m *ManagerCtx) Stop() {
 	m.clearAllSegments()
 }
 
-func (m *ManagerCtx) Preload(ctx context.Context) error {
-	if !m.config.Cache {
-		return fmt.Errorf("cache not enabled")
+func (m *ManagerCtx) Preload(ctx context.Context) (*ProbeMediaData, error) {
+	if err := m.loadMetadata(ctx); err != nil {
+		return nil, err
 	}
 
-	return m.loadMetadata(ctx)
+	return m.metadata, nil
 }
 
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {

@@ -24,7 +24,7 @@ type Config struct {
 type Manager interface {
 	Start() error
 	Stop()
-	Preload(ctx context.Context) error
+	Preload(ctx context.Context) (*ProbeMediaData, error)
 
 	ServePlaylist(w http.ResponseWriter, r *http.Request)
 	ServeMedia(w http.ResponseWriter, r *http.Request)
