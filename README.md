@@ -69,7 +69,7 @@ vod:
   media-dir: ./media
   # Temporary transcode output directory, if empty, default tmp folder will be used
   transcode-dir: ./transcode
-  # Availalbe video profiles
+  # Available video profiles
   video-profiles:
     360p:
       width: 640
@@ -92,10 +92,10 @@ vod:
     bitrate: 192
   # If cache is enabled
   cache: true
-  # If empty, cache will be stored in the same directory as media soruce
+  # If dir is empty, cache will be stored in the same directory as media source
   # If not empty, cache files will be saved to specified directory
   cache-dir: ./cache
-  # Use custom ffmpeg & ffprobe binaries
+  # Use custom ffmpeg & ffprobe binary paths
   ffmpeg-binary: ffmpeg
   ffprobe-binary: ffmpeg
 

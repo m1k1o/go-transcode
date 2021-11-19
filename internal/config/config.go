@@ -112,11 +112,6 @@ func (Server) Init(cmd *cobra.Command) error {
 		return err
 	}
 
-	cmd.PersistentFlags().String("voddir", "", "vod dir")
-	if err := viper.BindPFlag("voddir", cmd.PersistentFlags().Lookup("voddir")); err != nil {
-		return err
-	}
-
 	return nil
 }
 
