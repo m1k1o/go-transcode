@@ -1,5 +1,7 @@
 # go-transcode HTTP on-demand transcoding API
 
+On demand transcoding of live sources and static files (with seeking).
+
 ## Why
 
 Transcoding is expensive and resource consuming operation on CPU and GPU. For big companies with thousands of customers it is essential, to have a dedicated 24/7 transcoding servers which can store all the transcoded versions.
@@ -26,7 +28,7 @@ VOD Outputs:
 - [x] HLS custom profile (h264+aac) : `http://go-transcode/vod/[media-path]/[profile].m3u8`
 
 Features:
-- [ ] Seeking for static files (index)
+- [x] Seeking for static files (indexed vod files)
 - [ ] Audio/Subtitles tracks
 - [ ] Private mode (serve users authenticated by reverse proxy)
 
@@ -72,9 +74,9 @@ vod:
   # Available video profiles
   video-profiles:
     360p:
-      width: 640
-      height: 360
-      bitrate: 800
+      width: 640 # px
+      height: 360 # px
+      bitrate: 800 # kbps
     540p:
       width: 960
       height: 540
@@ -93,7 +95,7 @@ vod:
   video-keyframes: false
   # Single audio profile used
   audio-profile:
-    bitrate: 192
+    bitrate: 192 # kbps
   # If cache is enabled
   cache: true
   # If dir is empty, cache will be stored in the same directory as media source
