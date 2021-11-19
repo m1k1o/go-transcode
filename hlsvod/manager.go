@@ -111,7 +111,7 @@ func (m *ManagerCtx) waitForReady() chan struct{} {
 // fetch metadata using ffprobe
 func (m *ManagerCtx) fetchMetadata(ctx context.Context) (err error) {
 	start := time.Now()
-	log.Info().Msg("fetching metadata")
+	m.logger.Info().Msg("fetching metadata")
 
 	// start ffprobe to get metadata about current media
 	m.metadata, err = ProbeMedia(ctx, m.config.FFprobeBinary, m.config.MediaPath)
@@ -130,7 +130,7 @@ func (m *ManagerCtx) fetchMetadata(ctx context.Context) (err error) {
 	}
 
 	elapsed := time.Since(start)
-	log.Info().Interface("duration", elapsed).Msg("fetched metadata")
+	m.logger.Info().Interface("duration", elapsed).Msg("fetched metadata")
 	return
 }
 
@@ -150,9 +150,9 @@ func (m *ManagerCtx) loadMetadata(ctx context.Context) error {
 			return nil
 		}
 
-		log.Err(err).Msg("cache unmarhalling returned error, replacing")
+		m.logger.Err(err).Msg("cache unmarhalling returned error, replacing")
 	} else if !errors.Is(err, os.ErrNotExist) {
-		log.Err(err).Msg("cache hit returned error, replacing")
+		m.logger.Err(err).Msg("cache hit returned error, replacing")
 	}
 
 	// fetch fresh metadata from a file
@@ -242,7 +242,7 @@ func (m *ManagerCtx) initialize() {
 	// prepare segment queue map
 	m.segmentQueue = map[int]chan struct{}{}
 
-	log.Info().
+	m.logger.Info().
 		Int("segments", len(m.segments)).
 		Bool("video", m.metadata.Video != nil).
 		Int("audios", len(m.metadata.Audio)).
@@ -298,7 +298,7 @@ func (m *ManagerCtx) clearAllSegments() {
 
 		segmentPath := path.Join(m.config.TranscodeDir, segmentName)
 		if err := os.Remove(segmentPath); err != nil {
-			log.Err(err).Str("path", segmentPath).Msg("error while removing file")
+			m.logger.Err(err).Str("path", segmentPath).Msg("error while removing file")
 		}
 	}
 }
@@ -336,7 +336,7 @@ func (m *ManagerCtx) waitForSegment(index int) (chan struct{}, bool) {
 }
 
 func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
-	logger := log.With().Int("offset", offset).Int("limit", limit).Logger()
+	logger := m.logger.With().Int("offset", offset).Int("limit", limit).Logger()
 
 	segmentTimes := m.breakpoints[offset : offset+limit+1]
 	logger.Info().Interface("segments-times", segmentTimes).Msg("transcoding segments")
@@ -435,7 +435,7 @@ func (m *ManagerCtx) Start() (err error) {
 	// initialize transcoder asynchronously
 	go func() {
 		if err := m.loadMetadata(m.ctx); err != nil {
-			log.Printf("%v\n", err)
+			m.logger.Err(err).Msg("unable to load metadata")
 			return
 		}
 

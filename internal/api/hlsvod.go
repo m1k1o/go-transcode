@@ -51,7 +51,7 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 			}).Preload(r.Context())
 
 			if err != nil {
-				logger.Err(err)
+				logger.Warn().Err(err).Msg("unable to preload metadata")
 				http.Error(w, "500 unable to preload metadata", http.StatusInternalServerError)
 				return
 			}
@@ -117,7 +117,7 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 			// create own transcoding directory
 			transcodeDir, err := os.MkdirTemp(a.config.Vod.TranscodeDir, fmt.Sprintf("vod-%s-*", profileID))
 			if err != nil {
-				logger.Err(err)
+				logger.Warn().Err(err).Msg("could not create temp dir")
 				http.Error(w, "500 could not create temp dir", http.StatusInternalServerError)
 				return
 			}
@@ -147,7 +147,7 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 			hlsVodManagers[ID] = manager
 
 			if err := manager.Start(); err != nil {
-				logger.Err(err)
+				logger.Warn().Err(err).Msg("hls vod manager could not be started")
 				http.Error(w, "500 hls vod manager could not be started", http.StatusInternalServerError)
 				return
 			}

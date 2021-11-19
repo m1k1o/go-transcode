@@ -19,9 +19,7 @@ var playHTML string
 
 func (a *ApiManagerCtx) HLS(r chi.Router) {
 	r.Get("/{profile}/{input}/index.m3u8", func(w http.ResponseWriter, r *http.Request) {
-		logger := log.With().
-			Str("module", "m3u8").
-			Logger()
+		logger := log.With().Str("module", "hls").Logger()
 
 		profile := chi.URLParam(r, "profile")
 		input := chi.URLParam(r, "input")

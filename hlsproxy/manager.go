@@ -60,7 +60,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		resp, err := http.Get(url)
 		if err != nil {
-			log.Err(err).Msg("unable to get HTTP")
+			m.logger.Err(err).Msg("unable to get HTTP")
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
@@ -69,14 +69,14 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		if resp.StatusCode < 200 && resp.StatusCode >= 300 {
 			defer resp.Body.Close()
 
-			log.Err(err).Int("code", resp.StatusCode).Msg("invalid HTTP response")
+			m.logger.Err(err).Int("code", resp.StatusCode).Msg("invalid HTTP response")
 			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 			return
 		}
 
 		buf, err := io.ReadAll(resp.Body)
 		if err != nil {
-			log.Err(err).Msg("unadle to read response body")
+			m.logger.Err(err).Msg("unadle to read response body")
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
@@ -100,7 +100,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		resp, err := http.Get(url)
 		if err != nil {
-			log.Err(err).Msg("unable to get HTTP")
+			m.logger.Err(err).Msg("unable to get HTTP")
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}
@@ -108,7 +108,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 		if resp.StatusCode < 200 && resp.StatusCode >= 300 {
 			defer resp.Body.Close()
 
-			log.Err(err).Int("code", resp.StatusCode).Msg("invalid HTTP response")
+			m.logger.Err(err).Int("code", resp.StatusCode).Msg("invalid HTTP response")
 			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 			return
 		}

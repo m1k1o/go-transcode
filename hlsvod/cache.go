@@ -13,7 +13,7 @@ func (m *ManagerCtx) getCacheData() ([]byte, error) {
 	// check for local cache
 	localCachePath := m.config.MediaPath + cacheFileSuffix
 	if _, err := os.Stat(localCachePath); err == nil {
-		m.logger.Warn().Str("path", localCachePath).Msg("media local cache hit")
+		m.logger.Info().Str("path", localCachePath).Msg("media local cache hit")
 		return os.ReadFile(localCachePath)
 	}
 
@@ -25,7 +25,7 @@ func (m *ManagerCtx) getCacheData() ([]byte, error) {
 	fileName := fmt.Sprintf("%x%s", hash, cacheFileSuffix)
 	globalCachePath := path.Join(m.config.CacheDir, fileName)
 	if _, err := os.Stat(globalCachePath); err == nil {
-		m.logger.Warn().Str("path", globalCachePath).Msg("media global cache hit")
+		m.logger.Info().Str("path", globalCachePath).Msg("media global cache hit")
 		return os.ReadFile(globalCachePath)
 	}
 
