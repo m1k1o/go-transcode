@@ -87,6 +87,10 @@ vod:
       width: 1920
       height: 1080
       bitrate: 5000
+  # Use video keyframes as existing reference for chunks split
+  # Using this might cause long probing times in order to get
+  # all keyframes - therefore they should be cached
+  video-keyframes: false
   # Single audio profile used
   audio-profile:
     bitrate: 192

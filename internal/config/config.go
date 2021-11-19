@@ -51,14 +51,15 @@ type AudioProfile struct {
 }
 
 type VOD struct {
-	MediaDir      string                  `mapstructure:"media-dir"`
-	TranscodeDir  string                  `mapstructure:"transcode-dir"`
-	VideoProfiles map[string]VideoProfile `mapstructure:"video-profiles"`
-	AudioProfile  AudioProfile            `mapstructure:"audio-profile"`
-	Cache         bool                    `mapstructure:"cache"`
-	CacheDir      string                  `mapstructure:"cache-dir"`
-	FFmpegBinary  string                  `mapstructure:"ffmpeg-binary"`
-	FFprobeBinary string                  `mapstructure:"ffprobe-binary"`
+	MediaDir       string                  `mapstructure:"media-dir"`
+	TranscodeDir   string                  `mapstructure:"transcode-dir"`
+	VideoProfiles  map[string]VideoProfile `mapstructure:"video-profiles"`
+	VideoKeyframes bool                    `mapstructure:"video-keyframes"`
+	AudioProfile   AudioProfile            `mapstructure:"audio-profile"`
+	Cache          bool                    `mapstructure:"cache"`
+	CacheDir       string                  `mapstructure:"cache-dir"`
+	FFmpegBinary   string                  `mapstructure:"ffmpeg-binary"`
+	FFprobeBinary  string                  `mapstructure:"ffprobe-binary"`
 }
 
 type Server struct {

@@ -119,8 +119,8 @@ func (m *ManagerCtx) fetchMetadata() (err error) {
 		return fmt.Errorf("unable probe media for metadata: %v", err)
 	}
 
-	// if media has video, use keyframes as reference for segments
-	if m.metadata.Video != nil && m.metadata.Video.PktPtsTime == nil {
+	// if media has video, use keyframes as reference for segments if allowed so
+	if m.metadata.Video != nil && m.metadata.Video.PktPtsTime == nil && m.config.VideoKeyframes {
 		// start ffprobe to get keyframes from video
 		videoData, err := ProbeVideo(m.ctx, m.config.FFprobeBinary, m.config.MediaPath)
 		if err != nil {
