@@ -34,11 +34,39 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 		hlsResource := urlPath[lastSlashIndex+1:]
 		// everything before last slash is vod media path
 		vodMediaPath := urlPath[:lastSlashIndex]
+		// use clean path
+		vodMediaPath = filepath.Clean(vodMediaPath)
+		vodMediaPath = path.Join(a.config.Vod.MediaDir, vodMediaPath)
 
 		// serve master profile
 		if hlsResource == "index.m3u8" {
+			data, err := hlsvod.New(hlsvod.Config{
+				MediaPath: vodMediaPath,
+
+				Cache:    a.config.Vod.Cache,
+				CacheDir: a.config.Vod.CacheDir,
+
+				FFmpegBinary:  a.config.Vod.FFmpegBinary,
+				FFprobeBinary: a.config.Vod.FFprobeBinary,
+			}).Preload(r.Context())
+
+			if err != nil {
+				logger.Err(err)
+				http.Error(w, "500 unable to preload metadata", http.StatusInternalServerError)
+				return
+			}
+
+			height := 0
+			if data.Video != nil {
+				height = data.Video.Height
+			}
+
 			profiles := map[string]hlsvod.VideoProfile{}
 			for name, profile := range a.config.Vod.VideoProfiles {
+				if height != 0 && height <= profile.Height {
+					continue
+				}
+
 				profiles[name] = hlsvod.VideoProfile{
 					Width:   profile.Width,
 					Height:  profile.Height,
@@ -62,10 +90,6 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 			http.Error(w, "404 profile not found", http.StatusNotFound)
 			return
 		}
-
-		// use clean path
-		vodMediaPath = filepath.Clean(vodMediaPath)
-		vodMediaPath = path.Join(a.config.Vod.MediaDir, vodMediaPath)
 
 		ID := fmt.Sprintf("%s/%s", profileID, vodMediaPath)
 		manager, ok := hlsVodManagers[ID]
