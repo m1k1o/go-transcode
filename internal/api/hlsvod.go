@@ -133,6 +133,7 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 					Height:  profile.Height,
 					Bitrate: profile.Bitrate,
 				},
+				VideoKeyframes: a.config.Vod.VideoKeyframes,
 				AudioProfile: &hlsvod.AudioProfile{
 					Bitrate: a.config.Vod.AudioProfile.Bitrate,
 				},
