@@ -192,6 +192,10 @@ func ProbeVideo(ctx context.Context, ffprobeBinary string, inputFilePath string)
 	}
 
 	for _, frame := range out.Frames {
+		if frame.PktPtsTime == "" {
+			continue
+		}
+
 		pktPtsTime, err := strconv.ParseFloat(frame.PktPtsTime, 64)
 		if err != nil {
 			return nil, err
