@@ -201,6 +201,10 @@ func ProbeVideo(ctx context.Context, ffprobeBinary string, inputFilePath string)
 			return nil, err
 		}
 
+		if pktPtsTime == 0 {
+			continue
+		}
+
 		data.PktPtsTime = append(data.PktPtsTime, pktPtsTime)
 	}
 
