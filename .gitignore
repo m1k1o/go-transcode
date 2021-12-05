@@ -1,5 +1,5 @@
-config.yml
-config.yaml
-go-transcode
-bin
-.env
+/config.yml
+/config.yaml
+/go-transcode
+/bin
+/.env
