@@ -166,6 +166,13 @@ func (s *Server) Set() {
 		panic("specify at least one VOD video profile")
 	}
 
+	if s.Vod.Cache && s.Vod.CacheDir != "" {
+		err := os.MkdirAll(s.Vod.CacheDir, 0755)
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	if s.Vod.FFmpegBinary == "" {
 		s.Vod.FFmpegBinary = "ffmpeg"
 	}
