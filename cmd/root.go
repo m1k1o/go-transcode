@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"runtime"
+	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/rs/zerolog"
@@ -53,12 +54,13 @@ func init() {
 			viper.SetConfigName("config")
 		}
 
-		viper.SetEnvPrefix("transcode")
+		viper.SetEnvPrefix("TRANSCODE")
+		viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_", ".", "_"))
 		viper.AutomaticEnv() // read in environment variables that match
 
 		err := viper.ReadInConfig()
 		if err != nil && cfgFile != "" {
-			log.Err(err)
+			log.Err(err).Msg("unable to read in config")
 		}
 
 		// all configs (from file, env and flags) are loaded now,
