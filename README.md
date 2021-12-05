@@ -101,9 +101,9 @@ vod:
   # If dir is empty, cache will be stored in the same directory as media source
   # If not empty, cache files will be saved to specified directory
   cache-dir: ./cache
-  # Use custom ffmpeg & ffprobe binary paths
+  # OPTIONAL: Use custom ffmpeg & ffprobe binary paths
   ffmpeg-binary: ffmpeg
-  ffprobe-binary: ffmpeg
+  ffprobe-binary: ffprobe
 
 # For proxying HLS streams
 hls-proxy:
