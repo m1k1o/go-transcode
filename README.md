@@ -32,6 +32,8 @@ Features:
 - [ ] Audio/Subtitles tracks
 - [ ] Private mode (serve users authenticated by reverse proxy)
 
+You can find examples in [docs](./docs).
+
 ## Config
 
 Place your config file in `./config.yaml` (or `/etc/transcode/config.yaml`). The streams are defined like this:

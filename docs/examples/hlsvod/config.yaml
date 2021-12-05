@@ -1,0 +1,28 @@
+vod:
+  media-dir: /media
+  transcode-dir: /tmp/go-transcode
+
+  video-profiles:
+    360p:
+      width: 640
+      height: 360
+      bitrate: 800
+    540p:
+      width: 960
+      height: 540
+      bitrate: 1800
+    720p:
+      width: 1280
+      height: 720
+      bitrate: 2800
+    1080p:
+      width: 1920
+      height: 1080
+      bitrate: 5000
+
+  video-keyframes: true
+
+  audio-profile:
+    bitrate: 192
+  
+  cache: true

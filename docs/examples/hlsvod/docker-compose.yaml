@@ -1,0 +1,15 @@
+version: "3"
+
+services:
+  go-transcode:
+    build: . # path to go-transcode repository
+    container_name: go-transcode
+    restart: unless-stopped
+    tmpfs:
+      - "/tmp/go-transcode:mode=777,size=512M,uid=1000,gid=1000"
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./media:/media
+    command: serve -d
