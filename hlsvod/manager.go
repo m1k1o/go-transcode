@@ -208,7 +208,7 @@ func (m *ManagerCtx) getPlaylist() string {
 	for i := 2; i < len(m.breakpoints); i++ {
 		playlist = append(playlist,
 			fmt.Sprintf("#EXTINF:%.3f, no desc", m.breakpoints[i]-m.breakpoints[i-1]),
-			m.getSegmentName(i),
+			m.getSegmentName(i-1),
 		)
 	}
 
