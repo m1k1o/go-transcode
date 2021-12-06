@@ -104,6 +104,33 @@ func (m *ManagerCtx) waitForReady() chan struct{} {
 	return m.readyChan
 }
 
+func (m *ManagerCtx) httpEnsureReady(w http.ResponseWriter) bool {
+	// ensure that transcode started
+	if !m.isReady() {
+		select {
+		// waiting for transcode to be ready
+		case <-m.waitForReady():
+			// check if it started succesfully
+			if !m.isReady() {
+				m.logger.Warn().Msgf("manager is not ready")
+				http.Error(w, "500 manager not available", http.StatusInternalServerError)
+				return false
+			}
+		// when transcode stops before getting ready
+		case <-m.ctx.Done():
+			m.logger.Warn().Msg("manager load failed because of shutdown")
+			http.Error(w, "500 manager not available", http.StatusInternalServerError)
+			return false
+		case <-time.After(readyTimeout):
+			m.logger.Warn().Msg("manager load timeouted")
+			http.Error(w, "504 manager timeout", http.StatusGatewayTimeout)
+			return false
+		}
+	}
+
+	return true
+}
+
 //
 // metadata
 //
@@ -469,27 +496,9 @@ func (m *ManagerCtx) Preload(ctx context.Context) (*ProbeMediaData, error) {
 }
 
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
-	// ensure that transcode started
-	if !m.isReady() {
-		select {
-		// waiting for transcode to be ready
-		case <-m.waitForReady():
-			// check if it started succesfully
-			if !m.isReady() {
-				m.logger.Warn().Msgf("playlist load failed")
-				http.Error(w, "504 playlist not available", http.StatusInternalServerError)
-				return
-			}
-		// when transcode stops before getting ready
-		case <-m.ctx.Done():
-			m.logger.Warn().Msg("playlist load failed because of shutdown")
-			http.Error(w, "500 playlist not available", http.StatusInternalServerError)
-			return
-		case <-time.After(readyTimeout):
-			m.logger.Warn().Msg("playlist load timeouted")
-			http.Error(w, "504 playlist timeout", http.StatusGatewayTimeout)
-			return
-		}
+	// ensure that manager started
+	if !m.httpEnsureReady(w) {
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
@@ -497,6 +506,11 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
+	// ensure that manager started
+	if !m.httpEnsureReady(w) {
+		return
+	}
+
 	// same of the requested segment is everything after last slash
 	reqSegName := r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]
 

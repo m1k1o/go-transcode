@@ -101,12 +101,6 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 			Str("vodMediaPath", vodMediaPath).
 			Msg("new hls vod request")
 
-		// if found and is not playlist request, server media
-		if ok && hlsResource != profileID+".m3u8" {
-			manager.ServeMedia(w, r)
-			return
-		}
-
 		// if manager was not found
 		if !ok {
 			// check if vod media path exists
@@ -155,6 +149,11 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 			}
 		}
 
-		manager.ServePlaylist(w, r)
+		// server playlist or segment
+		if hlsResource == profileID+".m3u8" {
+			manager.ServePlaylist(w, r)
+		} else {
+			manager.ServeMedia(w, r)
+		}
 	})
 }
