@@ -57,14 +57,15 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 				return
 			}
 
-			height := 0
+			width, height := 0, 0
 			if data.Video != nil {
-				height = data.Video.Height
+				width, height = data.Video.Width, data.Video.Height
 			}
 
 			profiles := map[string]hlsvod.VideoProfile{}
 			for name, profile := range a.config.Vod.VideoProfiles {
-				if height != 0 && height <= profile.Height {
+				if width != 0 && width < profile.Width &&
+					height != 0 && height < profile.Height {
 					continue
 				}
 
