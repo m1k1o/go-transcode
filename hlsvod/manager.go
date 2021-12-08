@@ -232,7 +232,7 @@ func (m *ManagerCtx) getPlaylist() string {
 	}
 
 	// playlist segments
-	for i := 2; i < len(m.breakpoints); i++ {
+	for i := 1; i < len(m.breakpoints); i++ {
 		playlist = append(playlist,
 			fmt.Sprintf("#EXTINF:%.3f, no desc", m.breakpoints[i]-m.breakpoints[i-1]),
 			m.getSegmentName(i-1),
@@ -262,7 +262,7 @@ func (m *ManagerCtx) initialize() {
 
 	// prepare transcode matrix from breakpoints
 	m.segments = map[int]string{}
-	for i := 1; i < len(m.breakpoints); i++ {
+	for i := 0; i < len(m.breakpoints); i++ {
 		m.segments[i] = ""
 	}
 
