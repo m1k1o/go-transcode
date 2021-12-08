@@ -122,6 +122,7 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 	}...)
 
 	cmd := exec.CommandContext(ctx, ffmpegBinary, args...)
+	log.Println("Starting FFmpeg process with args", strings.Join(cmd.Args[:], " "))
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
