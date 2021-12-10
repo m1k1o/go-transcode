@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -68,7 +69,7 @@ func (a *ApiManagerCtx) Mount(r *chi.Mux) {
 	r.Group(a.Http)
 }
 
-func (a *ApiManagerCtx) ProfilePath(folder string, profile string) (string, error) {
+func (a *ApiManagerCtx) profilePath(folder string, profile string) (string, error) {
 	// [profiles]/hls,http/[profile].sh
 	// [profiles] defaults to [basedir]/profiles
 
@@ -77,19 +78,19 @@ func (a *ApiManagerCtx) ProfilePath(folder string, profile string) (string, erro
 	}
 
 	profilePath := path.Join(a.config.Profiles, folder, fmt.Sprintf("%s.sh", profile))
-	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
+	if _, err := os.Stat(profilePath); err != nil {
 		return "", err
 	}
+
 	return profilePath, nil
 }
 
-// Call ProfilePath before
-func (a *ApiManagerCtx) transcodeStart(profilePath string, input string) (*exec.Cmd, error) {
+func (a *ApiManagerCtx) transcodeStart(ctx context.Context, profilePath string, input string) (*exec.Cmd, error) {
 	url, ok := a.config.Streams[input]
 	if !ok {
 		return nil, fmt.Errorf("stream not found")
 	}
 
 	log.Info().Str("profilePath", profilePath).Str("url", url).Msg("command startred")
-	return exec.Command(profilePath, url), nil
+	return exec.CommandContext(ctx, profilePath, url), nil
 }

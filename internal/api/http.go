@@ -21,7 +21,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 
 		// dummy input for testing purposes
 		file := a.config.AbsPath("profiles", "http-test.sh")
-		cmd := exec.Command(file)
+		cmd := exec.CommandContext(r.Context(), file)
 		logger.Info().Msg("command startred")
 
 		read, write := io.Pipe()
@@ -38,6 +38,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		go func() {
 			_ = cmd.Run()
 		}()
+
 		_, _ = io.Copy(w, read)
 	})
 
@@ -58,14 +59,14 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		}
 
 		// check if profile exists
-		profilePath, err := a.ProfilePath("hls", profile)
+		profilePath, err := a.profilePath("hls", profile)
 		if err != nil {
 			logger.Warn().Err(err).Msg("profile path could not be found")
 			http.Error(w, "404 profile not found", http.StatusNotFound)
 			return
 		}
 
-		cmd, err := a.transcodeStart(profilePath, input)
+		cmd, err := a.transcodeStart(r.Context(), profilePath, input)
 		if err != nil {
 			logger.Warn().Err(err).Msg("transcode could not be started")
 			http.Error(w, "500 not available", http.StatusInternalServerError)
@@ -89,6 +90,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		go func() {
 			_ = cmd.Run()
 		}()
+
 		_, _ = io.Copy(w, read)
 	})
 
@@ -110,14 +112,14 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		}
 
 		// check if profile exists
-		profilePath, err := a.ProfilePath("hls", profile)
+		profilePath, err := a.profilePath("hls", profile)
 		if err != nil {
 			logger.Warn().Err(err).Msg("profile path could not be found")
 			http.Error(w, "404 profile not found", http.StatusNotFound)
 			return
 		}
 
-		cmd, err := a.transcodeStart(profilePath, input)
+		cmd, err := a.transcodeStart(r.Context(), profilePath, input)
 		if err != nil {
 			logger.Warn().Err(err).Msg("transcode could not be started")
 			http.Error(w, "500 not available", http.StatusInternalServerError)

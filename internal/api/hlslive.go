@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	_ "embed"
 	"fmt"
 	"net/http"
@@ -37,7 +38,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		}
 
 		// check if profile exists
-		profilePath, err := a.ProfilePath("hls", profile)
+		profilePath, err := a.profilePath("hls", profile)
 		if err != nil {
 			logger.Warn().Err(err).Msg("profile path could not be found")
 			http.Error(w, "404 profile not found", http.StatusNotFound)
@@ -51,7 +52,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 			// create new manager
 			manager = hlslive.New(func() *exec.Cmd {
 				// get transcode cmd
-				cmd, err := a.transcodeStart(profilePath, input)
+				cmd, err := a.transcodeStart(context.Background(), profilePath, input)
 				if err != nil {
 					logger.Error().Err(err).Msg("transcode could not be started")
 				}
