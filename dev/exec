@@ -1,4 +1,0 @@
-#!/bin/sh
-cd "$(dirname "$0")"
-
-docker exec -it transcode_server_dev /bin/bash;
