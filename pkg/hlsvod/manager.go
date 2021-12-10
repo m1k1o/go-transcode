@@ -577,7 +577,6 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// return existing segment
-	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Content-Type", "video/MP2T")
 	http.ServeFile(w, r, segmentPath)
 }

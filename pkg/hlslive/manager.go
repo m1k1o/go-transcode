@@ -280,7 +280,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	m.lastRequest = time.Now()
 	m.mu.Unlock()
 
-	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
+	w.Header().Set("Content-Type", "video/MP2T")
 	w.Header().Set("Cache-Control", "no-cache")
 	http.ServeFile(w, r, path)
 }
