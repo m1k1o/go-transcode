@@ -9,37 +9,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-type Root struct {
-	Debug   bool
-	PProf   bool
-	CfgFile string
-}
-
-func (Root) Init(cmd *cobra.Command) error {
-	cmd.PersistentFlags().BoolP("debug", "d", false, "enable debug mode")
-	if err := viper.BindPFlag("debug", cmd.PersistentFlags().Lookup("debug")); err != nil {
-		return err
-	}
-
-	cmd.PersistentFlags().Bool("pprof", false, "enable pprof endpoint available at /debug/pprof")
-	if err := viper.BindPFlag("pprof", cmd.PersistentFlags().Lookup("pprof")); err != nil {
-		return err
-	}
-
-	cmd.PersistentFlags().String("config", "", "configuration file path")
-	if err := viper.BindPFlag("config", cmd.PersistentFlags().Lookup("config")); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (s *Root) Set() {
-	s.Debug = viper.GetBool("debug")
-	s.PProf = viper.GetBool("pprof")
-	s.CfgFile = viper.GetString("config")
-}
-
 type VideoProfile struct {
 	Width   int `mapstructure:"width"`
 	Height  int `mapstructure:"height"`
@@ -63,6 +32,8 @@ type VOD struct {
 }
 
 type Server struct {
+	PProf bool
+
 	Cert   string
 	Key    string
 	Bind   string
@@ -78,6 +49,11 @@ type Server struct {
 }
 
 func (Server) Init(cmd *cobra.Command) error {
+	cmd.PersistentFlags().Bool("pprof", false, "enable pprof endpoint available at /debug/pprof")
+	if err := viper.BindPFlag("pprof", cmd.PersistentFlags().Lookup("pprof")); err != nil {
+		return err
+	}
+
 	cmd.PersistentFlags().String("bind", "127.0.0.1:8080", "address/port/socket to serve neko")
 	if err := viper.BindPFlag("bind", cmd.PersistentFlags().Lookup("bind")); err != nil {
 		return err
@@ -117,6 +93,8 @@ func (Server) Init(cmd *cobra.Command) error {
 }
 
 func (s *Server) Set() {
+	s.PProf = viper.GetBool("pprof")
+
 	s.Cert = viper.GetString("cert")
 	s.Key = viper.GetString("key")
 	s.Bind = viper.GetString("bind")

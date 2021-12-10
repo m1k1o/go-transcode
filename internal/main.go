@@ -17,13 +17,11 @@ var Service *Main
 
 func init() {
 	Service = &Main{
-		RootConfig:   &config.Root{},
 		ServerConfig: &config.Server{},
 	}
 }
 
 type Main struct {
-	RootConfig   *config.Root
 	ServerConfig *config.Server
 
 	logger      zerolog.Logger
@@ -45,7 +43,7 @@ func (main *Main) Start() {
 	main.httpManager.Mount(main.apiManager.Mount)
 	main.httpManager.Start()
 
-	if main.RootConfig.PProf {
+	if main.ServerConfig.PProf {
 		pathPrefix := "/debug/pprof/"
 		main.httpManager.WithDebugPProf(pathPrefix)
 		main.logger.Info().Msgf("mounted debug pprof endpoint at %s", pathPrefix)
@@ -76,9 +74,4 @@ func (main *Main) ServeCommand(cmd *cobra.Command, args []string) {
 	main.logger.Warn().Msgf("received %s, attempting graceful shutdown", sig)
 	main.Shutdown()
 	main.logger.Info().Msg("shutdown complete")
-}
-
-func (main *Main) ConfigReload() {
-	main.RootConfig.Set()
-	main.ServerConfig.Set()
 }
