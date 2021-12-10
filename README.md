@@ -150,19 +150,17 @@ Join us in the [Matrix space](https://matrix.to/#/#go-transcode:proxychat.net) (
 
 The source code is in the following files/folders:
 
-- `cmd/` and `main.go`: source for the command-line interface
-- `hls/`: process runner for HLS transcoding
-- `hlsvod/`: process runner for HLS VOD transcoding (for static files)
-- `internal/`: actual source code logic
+- `.docker`: for docker support.
+- `cmd/` and `main.go`: source for the command-line interface.
+- `internal/`: internal source code modules.
+- `pkg/`: external modules as lib.
 
 *TODO: document different modules/packages and dependencies*
 
 Other files/folders in the repositories are:
 
-- `data/`: files used/served by go-transcode
-- `dev/`: some docker helper scripts
-- `profiles/`: the ffmpeg profiles for transcoding
-- `tests/`: some tests for the project
-- `Dockerfile`, `Dockerfile.nvidia` and `docker-compose.yaml`: for the docker lovers
-- `god.mod` and `go.sum`: golang dependencies/modules tracking
-- `LICENSE`: licensing information (Apache 2.0)
+- `docs/`: documentation and usage examples.
+- `profiles/`: the ffmpeg profiles for transcoding.
+- `tests/`: some tests for the project.
+- `god.mod` and `go.sum`: golang dependencies/modules tracking.
+- `LICENSE`: licensing information (Apache 2.0).
