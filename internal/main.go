@@ -10,7 +10,7 @@ import (
 
 	"github.com/m1k1o/go-transcode/internal/api"
 	"github.com/m1k1o/go-transcode/internal/config"
-	"github.com/m1k1o/go-transcode/internal/http"
+	"github.com/m1k1o/go-transcode/internal/server"
 )
 
 var Service *Main
@@ -24,9 +24,9 @@ func init() {
 type Main struct {
 	ServerConfig *config.Server
 
-	logger      zerolog.Logger
-	apiManager  *api.ApiManagerCtx
-	httpManager *http.HttpManagerCtx
+	logger        zerolog.Logger
+	apiManager    *api.ApiManagerCtx
+	serverManager *server.ServerManagerCtx
 }
 
 func (main *Main) Preflight() {
@@ -39,15 +39,9 @@ func (main *Main) Start() {
 	main.apiManager = api.New(config)
 	main.apiManager.Start()
 
-	main.httpManager = http.New(config)
-	main.httpManager.Mount(main.apiManager.Mount)
-	main.httpManager.Start()
-
-	if main.ServerConfig.PProf {
-		pathPrefix := "/debug/pprof/"
-		main.httpManager.WithDebugPProf(pathPrefix)
-		main.logger.Info().Msgf("mounted debug pprof endpoint at %s", pathPrefix)
-	}
+	main.serverManager = server.New(&config.Server)
+	main.serverManager.Mount(main.apiManager.Mount)
+	main.serverManager.Start()
 
 	main.logger.Info().Msgf("serving streams from basedir %s: %s", config.BaseDir, config.Streams)
 }
@@ -55,7 +49,7 @@ func (main *Main) Start() {
 func (main *Main) Shutdown() {
 	var err error
 
-	err = main.httpManager.Shutdown()
+	err = main.serverManager.Shutdown()
 	main.logger.Err(err).Msg("http manager shutdown")
 
 	err = main.apiManager.Shutdown()

@@ -46,20 +46,17 @@ streams:
 Full configuration example:
 
 ```yaml
-# allow debug outputs
-debug: true
-
-# mount debug pprof endpoint at /debug/pprof/
-pprof: true
-
 # bind server to IP:PORT (use :8888 for all connections)
 bind: localhost:8888
 
 # serve static files from this directory (optional)
 static: /var/www/html
 
-# TODO: issue #4
+# trust reverse proxies
 proxy: true
+
+# mount debug pprof endpoint at /debug/pprof/
+pprof: true
 
 # For live streaming
 streams:

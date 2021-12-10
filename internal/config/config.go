@@ -5,6 +5,8 @@ import (
 	"os"
 	"path"
 
+	"github.com/m1k1o/go-transcode/internal/server"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -32,13 +34,7 @@ type VOD struct {
 }
 
 type Server struct {
-	PProf bool
-
-	Cert   string
-	Key    string
-	Bind   string
-	Static string
-	Proxy  bool
+	Server server.Config
 
 	BaseDir  string            `yaml:"basedir,omitempty"`
 	Streams  map[string]string `yaml:"streams"`
@@ -48,34 +44,9 @@ type Server struct {
 	HlsProxy map[string]string
 }
 
-func (Server) Init(cmd *cobra.Command) error {
-	cmd.PersistentFlags().Bool("pprof", false, "enable pprof endpoint available at /debug/pprof")
-	if err := viper.BindPFlag("pprof", cmd.PersistentFlags().Lookup("pprof")); err != nil {
-		return err
-	}
-
-	cmd.PersistentFlags().String("bind", "127.0.0.1:8080", "address/port/socket to serve neko")
-	if err := viper.BindPFlag("bind", cmd.PersistentFlags().Lookup("bind")); err != nil {
-		return err
-	}
-
-	cmd.PersistentFlags().String("cert", "", "path to the SSL cert used to secure the neko server")
-	if err := viper.BindPFlag("cert", cmd.PersistentFlags().Lookup("cert")); err != nil {
-		return err
-	}
-
-	cmd.PersistentFlags().String("key", "", "path to the SSL key used to secure the neko server")
-	if err := viper.BindPFlag("key", cmd.PersistentFlags().Lookup("key")); err != nil {
-		return err
-	}
-
-	cmd.PersistentFlags().String("static", "", "path to neko client files to serve")
-	if err := viper.BindPFlag("static", cmd.PersistentFlags().Lookup("static")); err != nil {
-		return err
-	}
-
-	cmd.PersistentFlags().Bool("proxy", false, "allow reverse proxies")
-	if err := viper.BindPFlag("proxy", cmd.PersistentFlags().Lookup("proxy")); err != nil {
+func (s *Server) Init(cmd *cobra.Command) error {
+	// TODO: Scope
+	if err := s.Server.Init(cmd); err != nil {
 		return err
 	}
 
@@ -93,13 +64,7 @@ func (Server) Init(cmd *cobra.Command) error {
 }
 
 func (s *Server) Set() {
-	s.PProf = viper.GetBool("pprof")
-
-	s.Cert = viper.GetString("cert")
-	s.Key = viper.GetString("key")
-	s.Bind = viper.GetString("bind")
-	s.Static = viper.GetString("static")
-	s.Proxy = viper.GetBool("proxy")
+	s.Server.Set()
 
 	s.BaseDir = viper.GetString("basedir")
 	if s.BaseDir == "" {

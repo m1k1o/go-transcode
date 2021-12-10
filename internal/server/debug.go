@@ -1,4 +1,4 @@
-package http
+package server
 
 import (
 	"net/http"
@@ -7,8 +7,10 @@ import (
 	"github.com/go-chi/chi"
 )
 
-func (s *HttpManagerCtx) WithDebugPProf(pathPrefix string) {
-	s.router.Route(pathPrefix, func(r chi.Router) {
+const pprofPath = "/debug/pprof/"
+
+func withPProf(router *chi.Mux) {
+	router.Route(pprofPath, func(r chi.Router) {
 		r.Get("/", pprof.Index)
 
 		r.Get("/{action}", func(w http.ResponseWriter, r *http.Request) {
