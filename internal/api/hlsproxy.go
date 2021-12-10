@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-chi/chi"
 
-	"github.com/m1k1o/go-transcode/hlsproxy"
+	"github.com/m1k1o/go-transcode/pkg/hlsproxy"
 )
 
 const hlsProxyPerfix = "/hlsproxy/"
