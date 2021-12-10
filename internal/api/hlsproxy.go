@@ -27,7 +27,7 @@ func (a *ApiManagerCtx) HLSProxy(r chi.Router) {
 		manager, ok := hlsProxyManagers[ID]
 		if !ok {
 			// create new manager
-			manager = hlsproxy.New(baseUrl, hlsProxyPerfix+ID+"/")
+			manager = hlsproxy.New(baseUrl, hlsProxyPerfix+ID+"/", nil)
 			hlsProxyManagers[ID] = manager
 		}
 

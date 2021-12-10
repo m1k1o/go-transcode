@@ -90,7 +90,7 @@ func (m *ManagerCtx) cleanupStart() {
 	go func() {
 		m.logger.Debug().Msg("cleanup started")
 
-		ticker := time.NewTicker(cacheCleanupPeriod)
+		ticker := time.NewTicker(m.config.CacheCleanupPeriod)
 		defer ticker.Stop()
 
 		for {

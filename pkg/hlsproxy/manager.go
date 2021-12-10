@@ -14,19 +14,11 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// how often should be cache cleanup called
-const cacheCleanupPeriod = 4 * time.Second
-
-// how long should be segment kept in memory
-const segmentExpiration = 60 * time.Second
-
-// how long should be playlist kept in memory
-const playlistExpiration = 1 * time.Second
-
 type ManagerCtx struct {
 	logger  zerolog.Logger
 	baseUrl string
 	prefix  string
+	config  *Config
 
 	cache   map[string]*utils.Cache
 	cacheMu sync.RWMutex
@@ -36,7 +28,16 @@ type ManagerCtx struct {
 	shutdown  chan struct{}
 }
 
-func New(baseUrl string, prefix string) *ManagerCtx {
+func New(baseUrl string, prefix string, config *Config) *ManagerCtx {
+	// use default config values
+	if config == nil {
+		config = &Config{
+			CacheCleanupPeriod: 4 * time.Second,
+			SegmentExpiration:  60 * time.Second,
+			PlaylistExpiration: 1 * time.Second,
+		}
+	}
+
 	// ensure it ends with slash
 	baseUrl = strings.TrimSuffix(baseUrl, "/")
 	baseUrl += "/"
@@ -45,6 +46,7 @@ func New(baseUrl string, prefix string) *ManagerCtx {
 		logger:  log.With().Str("module", "hlsproxy").Str("submodule", "manager").Logger(),
 		baseUrl: baseUrl,
 		prefix:  prefix,
+		config:  config,
 		cache:   map[string]*utils.Cache{},
 	}
 }
@@ -84,7 +86,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		var re = regexp.MustCompile(`(?m:^(https?\:\/\/[^\/]+)?\/)`)
 		text := re.ReplaceAllString(string(buf), m.prefix)
 
-		cache = m.saveToCache(url, strings.NewReader(text), playlistExpiration)
+		cache = m.saveToCache(url, strings.NewReader(text), m.config.PlaylistExpiration)
 	}
 
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
@@ -113,7 +115,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		cache = m.saveToCache(url, resp.Body, segmentExpiration)
+		cache = m.saveToCache(url, resp.Body, m.config.SegmentExpiration)
 	}
 
 	w.Header().Set("Content-Type", "video/MP2T")
