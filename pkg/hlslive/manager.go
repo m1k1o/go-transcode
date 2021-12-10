@@ -17,26 +17,12 @@ import (
 	"github.com/m1k1o/go-transcode/internal/utils"
 )
 
-// how often should be cleanup called
-const cleanupPeriod = 4 * time.Second
-
-// timeout for first playlist, when it waits for new data
-const playlistTimeout = 60 * time.Second
-
-// minimum segments available to consider stream as active
-const hlsMinimumSegments = 2
-
-// how long must be active stream idle to be considered as dead
-const activeIdleTimeout = 12 * time.Second
-
-// how long must be iactive stream idle to be considered as dead
-const inactiveIdleTimeout = 24 * time.Second
-
 type ManagerCtx struct {
 	logger     zerolog.Logger
 	mu         sync.Mutex
 	cmdFactory func() *exec.Cmd
 	active     bool
+	config     *Config
 	events     struct {
 		onStart  func()
 		onCmdLog func(message string)
@@ -54,10 +40,22 @@ type ManagerCtx struct {
 	shutdown     chan interface{}
 }
 
-func New(cmdFactory func() *exec.Cmd) *ManagerCtx {
+func New(cmdFactory func() *exec.Cmd, config *Config) *ManagerCtx {
+	// use default config values
+	if config == nil {
+		config = &Config{
+			CleanupPeriod:       4 * time.Second,
+			PlaylistTimeout:     60 * time.Second,
+			HlsMinimumSegments:  2,
+			ActiveIdleTimeout:   12 * time.Second,
+			InactiveIdleTimeout: 24 * time.Second,
+		}
+	}
+
 	return &ManagerCtx{
 		logger:     log.With().Str("module", "hls").Str("submodule", "manager").Logger(),
 		cmdFactory: cmdFactory,
+		config:     config,
 
 		playlistLoad: make(chan string),
 		shutdown:     make(chan interface{}),
@@ -119,7 +117,7 @@ func (m *ManagerCtx) Start() error {
 					Str("playlist", m.playlist).
 					Msg("received playlist")
 
-				if m.sequence == hlsMinimumSegments {
+				if m.sequence == m.config.HlsMinimumSegments {
 					m.active = true
 					m.playlistLoad <- m.playlist
 					close(m.playlistLoad)
@@ -136,7 +134,7 @@ func (m *ManagerCtx) Start() error {
 
 	// periodic cleanup
 	go func() {
-		ticker := time.NewTicker(cleanupPeriod)
+		ticker := time.NewTicker(m.config.CleanupPeriod)
 		defer ticker.Stop()
 
 		for {
@@ -217,7 +215,7 @@ func (m *ManagerCtx) Stop() {
 func (m *ManagerCtx) Cleanup() {
 	m.mu.Lock()
 	diff := time.Since(m.lastRequest)
-	stop := m.active && diff > activeIdleTimeout || !m.active && diff > inactiveIdleTimeout
+	stop := m.active && diff > m.config.ActiveIdleTimeout || !m.active && diff > m.config.InactiveIdleTimeout
 	m.mu.Unlock()
 
 	m.logger.Debug().
@@ -256,7 +254,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 			m.logger.Warn().Msg("playlist load failed because of shutdown")
 			http.Error(w, "500 playlist not available", http.StatusInternalServerError)
 			return
-		case <-time.After(playlistTimeout):
+		case <-time.After(m.config.PlaylistTimeout):
 			m.logger.Warn().Msg("playlist load channel timeouted")
 			http.Error(w, "504 playlist timeout", http.StatusGatewayTimeout)
 			return
