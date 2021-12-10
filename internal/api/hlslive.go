@@ -9,10 +9,10 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/rs/zerolog/log"
 
-	"github.com/m1k1o/go-transcode/pkg/hls"
+	"github.com/m1k1o/go-transcode/pkg/hlslive"
 )
 
-var hlsManagers map[string]hls.Manager = make(map[string]hls.Manager)
+var hlsManagers map[string]hlslive.Manager = make(map[string]hlslive.Manager)
 
 //go:embed play.html
 var playHTML string
@@ -49,7 +49,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 		manager, ok := hlsManagers[ID]
 		if !ok {
 			// create new manager
-			manager = hls.New(func() *exec.Cmd {
+			manager = hlslive.New(func() *exec.Cmd {
 				// get transcode cmd
 				cmd, err := a.transcodeStart(profilePath, input)
 				if err != nil {

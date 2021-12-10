@@ -1,4 +1,4 @@
-package hls
+package hlslive
 
 import (
 	"errors"
