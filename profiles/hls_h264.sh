@@ -40,6 +40,7 @@ exec ffmpeg -hide_banner -loglevel warning \
       -b:a $ABANDWIDTH \
     -c:v $CV \
       -profile:v main \
+      -force_key_frames "expr:gte(t,n_forced*1)" \
       -b:v $VBANDWIDTH \
       -maxrate $VMAXRATE \
       -bufsize $VBUFSIZE \
