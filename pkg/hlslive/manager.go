@@ -255,13 +255,13 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(playlist))
 }
 
-func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
+func (m *ManagerCtx) ServeSegment(w http.ResponseWriter, r *http.Request) {
 	fileName := path.Base(r.URL.RequestURI())
 	path := path.Join(m.tempdir, fileName)
 
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		m.logger.Warn().Str("path", path).Msg("media file not found")
-		http.Error(w, "404 media not found", http.StatusNotFound)
+		m.logger.Warn().Str("path", path).Msg("segment not found")
+		http.Error(w, "404 segment not found", http.StatusNotFound)
 		return
 	}
 

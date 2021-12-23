@@ -155,7 +155,7 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 		if hlsResource == profileID+".m3u8" {
 			manager.ServePlaylist(w, r)
 		} else {
-			manager.ServeMedia(w, r)
+			manager.ServeSegment(w, r)
 		}
 	})
 }

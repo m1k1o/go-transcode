@@ -84,7 +84,7 @@ func (a *ApiManagerCtx) HLS(r chi.Router) {
 			return
 		}
 
-		manager.ServeMedia(w, r)
+		manager.ServeSegment(w, r)
 	})
 
 	r.Get("/{profile}/{input}/play.html", func(w http.ResponseWriter, r *http.Request) {

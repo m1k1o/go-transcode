@@ -489,7 +489,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(m.playlist))
 }
 
-func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
+func (m *ManagerCtx) ServeSegment(w http.ResponseWriter, r *http.Request) {
 	// ensure that manager started
 	if !m.httpEnsureReady(w) {
 		return
@@ -501,7 +501,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 	// getting index from segment name
 	index, ok := m.parseSegmentIndex(reqSegName)
 	if !ok {
-		http.Error(w, "400 bad media path", http.StatusBadRequest)
+		http.Error(w, "400 bad segment path", http.StatusBadRequest)
 		return
 	}
 
@@ -514,8 +514,8 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 
 	// try to transcode from current segment
 	if err := m.transcodeFromSegment(index); err != nil {
-		m.logger.Err(err).Int("index", index).Msg("unable to transcode media")
-		http.Error(w, "500 unable to transcode", http.StatusInternalServerError)
+		m.logger.Err(err).Int("index", index).Msg("unable to transcode segment")
+		http.Error(w, "500 unable to transcode segment", http.StatusInternalServerError)
 		return
 	}
 
@@ -525,8 +525,8 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 		segChan, ok := m.waitForSegment(index)
 		if !ok {
 			// this should never happen
-			m.logger.Error().Int("index", index).Msg("media not queued even after transcode")
-			http.Error(w, "409 media not queued even after transcode", http.StatusConflict)
+			m.logger.Error().Int("index", index).Msg("segment not queued even after transcode")
+			http.Error(w, "409 segment not queued even after transcode", http.StatusConflict)
 			return
 		}
 
@@ -543,20 +543,20 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 			}
 		// when transcode stops before getting ready
 		case <-m.ctx.Done():
-			m.logger.Warn().Msg("media transcode failed because of shutdown")
-			http.Error(w, "500 media not available", http.StatusInternalServerError)
+			m.logger.Warn().Msg("segment transcode failed because of shutdown")
+			http.Error(w, "500 segment not available", http.StatusInternalServerError)
 			return
 		case <-time.After(m.config.TranscodeTimeout):
-			m.logger.Warn().Msg("media transcode timeouted")
-			http.Error(w, "504 media timeout", http.StatusGatewayTimeout)
+			m.logger.Warn().Msg("segment transcode timeouted")
+			http.Error(w, "504 segment transcode timeout", http.StatusGatewayTimeout)
 			return
 		}
 	}
 
 	// check if segment is on the disk
 	if _, err := os.Stat(segmentPath); os.IsNotExist(err) {
-		m.logger.Warn().Int("index", index).Str("path", segmentPath).Msg("media file not found")
-		http.Error(w, "404 media not found", http.StatusNotFound)
+		m.logger.Warn().Int("index", index).Str("path", segmentPath).Msg("segment file not found")
+		http.Error(w, "404 segment not found", http.StatusNotFound)
 		return
 	}
 

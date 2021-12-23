@@ -64,5 +64,5 @@ type Manager interface {
 	Preload(ctx context.Context) (*ProbeMediaData, error)
 
 	ServePlaylist(w http.ResponseWriter, r *http.Request)
-	ServeMedia(w http.ResponseWriter, r *http.Request)
+	ServeSegment(w http.ResponseWriter, r *http.Request)
 }
