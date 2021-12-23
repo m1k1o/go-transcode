@@ -15,8 +15,9 @@ type Config struct {
 	VideoKeyframes bool
 	AudioProfile   *AudioProfile
 
-	Cache    bool
-	CacheDir string // if not empty, cache will folder will be used instead of media path
+	Cache        bool
+	CacheDir     string // if not empty, cache will folder will be used instead of media path
+	CacheFileExt string // extension of cache files created by this module
 
 	FFmpegBinary  string
 	FFprobeBinary string
@@ -31,6 +32,9 @@ type Config struct {
 }
 
 func (c Config) withDefaultValues() Config {
+	if c.CacheFileExt == "" {
+		c.FFmpegBinary = ".go-transcode-cache"
+	}
 	if c.FFmpegBinary == "" {
 		c.FFmpegBinary = "ffmpeg"
 	}
