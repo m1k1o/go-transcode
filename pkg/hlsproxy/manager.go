@@ -14,10 +14,8 @@ import (
 )
 
 type ManagerCtx struct {
-	logger  zerolog.Logger
-	baseUrl string
-	prefix  string
-	config  Config
+	logger zerolog.Logger
+	config Config
 
 	cache   map[string]*utils.Cache
 	cacheMu sync.RWMutex
@@ -27,17 +25,11 @@ type ManagerCtx struct {
 	shutdown  chan struct{}
 }
 
-func New(baseUrl string, prefix string, config *Config) *ManagerCtx {
-	// ensure it ends with slash
-	baseUrl = strings.TrimSuffix(baseUrl, "/")
-	baseUrl += "/"
-
+func New(config *Config) *ManagerCtx {
 	return &ManagerCtx{
-		logger:  log.With().Str("module", "hlsproxy").Str("submodule", "manager").Logger(),
-		baseUrl: baseUrl,
-		prefix:  prefix,
-		config:  config.withDefaultValues(),
-		cache:   map[string]*utils.Cache{},
+		logger: log.With().Str("module", "hlsproxy").Str("submodule", "manager").Logger(),
+		config: config.withDefaultValues(),
+		cache:  map[string]*utils.Cache{},
 	}
 }
 
@@ -46,7 +38,7 @@ func (m *ManagerCtx) Shutdown() {
 }
 
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
-	url := m.baseUrl + strings.TrimPrefix(r.URL.String(), m.prefix)
+	url := m.config.PlaylistBaseUrl + strings.TrimPrefix(r.URL.String(), m.config.PlaylistPrefix)
 
 	cache, ok := m.getFromCache(url)
 	if !ok {
@@ -73,8 +65,9 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		var re = regexp.MustCompile(`(?m:^(https?\:\/\/[^\/]+)?\/)`)
-		text := re.ReplaceAllString(string(buf), m.prefix)
+		// TODO: Handle relative paths.
+		text := string(buf)
+		text = regexp.MustCompile(`(?m:^(https?\:\/\/[^\/]+)?\/)`).ReplaceAllString(text, m.config.SegmentPrefix)
 
 		cache = m.saveToCache(url, strings.NewReader(text), m.config.PlaylistExpiration)
 	}
@@ -85,14 +78,14 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	cache.ServeHTTP(w)
 }
 
-func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
-	url := m.baseUrl + strings.TrimPrefix(r.URL.String(), m.prefix)
+func (m *ManagerCtx) ServeSegment(w http.ResponseWriter, r *http.Request) {
+	url := m.config.SegmentBaseUrl + strings.TrimPrefix(r.URL.String(), m.config.SegmentPrefix)
 
 	cache, ok := m.getFromCache(url)
 	if !ok {
 		resp, err := http.Get(url)
 		if err != nil {
-			m.logger.Err(err).Msg("unable to get HTTP")
+			m.logger.Err(err).Str("url", url).Msg("unable to get HTTP")
 			http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 			return
 		}

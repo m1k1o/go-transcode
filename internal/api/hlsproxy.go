@@ -27,7 +27,10 @@ func (a *ApiManagerCtx) HLSProxy(r chi.Router) {
 		manager, ok := hlsProxyManagers[ID]
 		if !ok {
 			// create new manager
-			manager = hlsproxy.New(baseUrl, hlsProxyPerfix+ID+"/", nil)
+			manager = hlsproxy.New(&hlsproxy.Config{
+				PlaylistBaseUrl: baseUrl,
+				PlaylistPrefix:  hlsProxyPerfix + ID,
+			})
 			hlsProxyManagers[ID] = manager
 		}
 
@@ -35,7 +38,7 @@ func (a *ApiManagerCtx) HLSProxy(r chi.Router) {
 		if strings.HasSuffix(r.URL.String(), ".m3u8") {
 			manager.ServePlaylist(w, r)
 		} else {
-			manager.ServeMedia(w, r)
+			manager.ServeSegment(w, r)
 		}
 	})
 }
