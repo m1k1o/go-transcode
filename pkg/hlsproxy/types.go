@@ -11,6 +11,19 @@ type Config struct {
 	PlaylistExpiration time.Duration // how long should be playlist kept in memory
 }
 
+func (c Config) withDefaultValues() Config {
+	if c.CacheCleanupPeriod == 0 {
+		c.CacheCleanupPeriod = 4 * time.Second
+	}
+	if c.SegmentExpiration == 0 {
+		c.SegmentExpiration = 60 * time.Second
+	}
+	if c.PlaylistExpiration == 0 {
+		c.PlaylistExpiration = 1 * time.Second
+	}
+	return c
+}
+
 type Manager interface {
 	Shutdown()
 

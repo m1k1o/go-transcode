@@ -41,7 +41,7 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 
 		// serve master profile
 		if hlsResource == "index.m3u8" {
-			data, err := hlsvod.New(hlsvod.Config{
+			data, err := hlsvod.New(&hlsvod.Config{
 				MediaPath:      vodMediaPath,
 				VideoKeyframes: a.config.Vod.VideoKeyframes,
 
@@ -120,7 +120,7 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 			}
 
 			// create new manager
-			manager = hlsvod.New(hlsvod.Config{
+			manager = hlsvod.New(&hlsvod.Config{
 				MediaPath:     vodMediaPath,
 				TranscodeDir:  transcodeDir,
 				SegmentPrefix: profileID,

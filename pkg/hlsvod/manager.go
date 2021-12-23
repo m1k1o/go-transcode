@@ -18,20 +18,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// how long can it take for transcode to be ready
-const readyTimeout = 80 * time.Second
-
-// how long can it take for transcode to return first data
-const transcodeTimeout = 10 * time.Second
-
 type ManagerCtx struct {
 	logger zerolog.Logger
 	config Config
-
-	segmentLength    float64
-	segmentOffset    float64
-	segmentBufferMin int // minimum segments available after playing head
-	segmentBufferMax int // maximum segments to be transcoded at once
 
 	ready     bool
 	readyMu   sync.RWMutex
@@ -51,17 +40,12 @@ type ManagerCtx struct {
 	cancel context.CancelFunc
 }
 
-func New(config Config) *ManagerCtx {
+func New(config *Config) *ManagerCtx {
 	ctx, cancel := context.WithCancel(context.Background())
+
 	return &ManagerCtx{
 		logger: log.With().Str("module", "hlsvod").Str("submodule", "manager").Logger(),
-		config: config,
-
-		segmentLength:    3.50,
-		segmentOffset:    1.25,
-		segmentBufferMin: 3,
-		segmentBufferMax: 5,
-
+		config: config.withDefaultValues(),
 		ctx:    ctx,
 		cancel: cancel,
 	}
@@ -121,7 +105,7 @@ func (m *ManagerCtx) httpEnsureReady(w http.ResponseWriter) bool {
 			m.logger.Warn().Msg("manager load failed because of shutdown")
 			http.Error(w, "500 manager not available", http.StatusInternalServerError)
 			return false
-		case <-time.After(readyTimeout):
+		case <-time.After(m.config.ReadyTimeout):
 			m.logger.Warn().Msg("manager load timeouted")
 			http.Error(w, "504 manager timeout", http.StatusGatewayTimeout)
 			return false
@@ -228,7 +212,7 @@ func (m *ManagerCtx) getPlaylist() string {
 		"#EXT-X-VERSION:4",
 		"#EXT-X-PLAYLIST-TYPE:VOD",
 		"#EXT-X-MEDIA-SEQUENCE:0",
-		fmt.Sprintf("#EXT-X-TARGETDURATION:%.2f", m.segmentLength+m.segmentOffset),
+		fmt.Sprintf("#EXT-X-TARGETDURATION:%.2f", m.config.SegmentLength+m.config.SegmentOffset),
 	}
 
 	// playlist segments
@@ -255,7 +239,7 @@ func (m *ManagerCtx) initialize() {
 	}
 
 	// generate breakpoints from keyframes
-	m.breakpoints = convertToSegments(keyframes, m.metadata.Duration, m.segmentLength, m.segmentOffset)
+	m.breakpoints = convertToSegments(keyframes, m.metadata.Duration, m.config.SegmentLength, m.config.SegmentOffset)
 
 	// generate playlist
 	m.playlist = m.getPlaylist()
@@ -420,8 +404,8 @@ func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
 
 func (m *ManagerCtx) transcodeFromSegment(index int) error {
 	segmentsTotal := len(m.segments)
-	if index+m.segmentBufferMax < segmentsTotal {
-		segmentsTotal = index + m.segmentBufferMax
+	if index+m.config.SegmentBufferMax < segmentsTotal {
+		segmentsTotal = index + m.config.SegmentBufferMax
 	}
 
 	offset, limit := 0, 0
@@ -444,7 +428,7 @@ func (m *ManagerCtx) transcodeFromSegment(index int) error {
 	}
 
 	// if offset is greater than our minimal offset, we have enough segments available
-	if offset > m.segmentBufferMin {
+	if offset > m.config.SegmentBufferMin {
 		return nil
 	}
 
@@ -562,7 +546,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 			m.logger.Warn().Msg("media transcode failed because of shutdown")
 			http.Error(w, "500 media not available", http.StatusInternalServerError)
 			return
-		case <-time.After(transcodeTimeout):
+		case <-time.After(m.config.TranscodeTimeout):
 			m.logger.Warn().Msg("media transcode timeouted")
 			http.Error(w, "504 media timeout", http.StatusGatewayTimeout)
 			return

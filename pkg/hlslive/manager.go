@@ -19,10 +19,10 @@ import (
 
 type ManagerCtx struct {
 	logger     zerolog.Logger
+	config     Config
 	mu         sync.Mutex
 	cmdFactory func() *exec.Cmd
 	active     bool
-	config     *Config
 	events     struct {
 		onStart  func()
 		onCmdLog func(message string)
@@ -41,21 +41,10 @@ type ManagerCtx struct {
 }
 
 func New(cmdFactory func() *exec.Cmd, config *Config) *ManagerCtx {
-	// use default config values
-	if config == nil {
-		config = &Config{
-			CleanupPeriod:       4 * time.Second,
-			PlaylistTimeout:     60 * time.Second,
-			HlsMinimumSegments:  2,
-			ActiveIdleTimeout:   12 * time.Second,
-			InactiveIdleTimeout: 24 * time.Second,
-		}
-	}
-
 	return &ManagerCtx{
 		logger:     log.With().Str("module", "hls").Str("submodule", "manager").Logger(),
 		cmdFactory: cmdFactory,
-		config:     config,
+		config:     config.withDefaultValues(),
 
 		playlistLoad: make(chan string),
 		shutdown:     make(chan interface{}),

@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/m1k1o/go-transcode/internal/utils"
 
@@ -18,7 +17,7 @@ type ManagerCtx struct {
 	logger  zerolog.Logger
 	baseUrl string
 	prefix  string
-	config  *Config
+	config  Config
 
 	cache   map[string]*utils.Cache
 	cacheMu sync.RWMutex
@@ -29,15 +28,6 @@ type ManagerCtx struct {
 }
 
 func New(baseUrl string, prefix string, config *Config) *ManagerCtx {
-	// use default config values
-	if config == nil {
-		config = &Config{
-			CacheCleanupPeriod: 4 * time.Second,
-			SegmentExpiration:  60 * time.Second,
-			PlaylistExpiration: 1 * time.Second,
-		}
-	}
-
 	// ensure it ends with slash
 	baseUrl = strings.TrimSuffix(baseUrl, "/")
 	baseUrl += "/"
@@ -46,7 +36,7 @@ func New(baseUrl string, prefix string, config *Config) *ManagerCtx {
 		logger:  log.With().Str("module", "hlsproxy").Str("submodule", "manager").Logger(),
 		baseUrl: baseUrl,
 		prefix:  prefix,
-		config:  config,
+		config:  config.withDefaultValues(),
 		cache:   map[string]*utils.Cache{},
 	}
 }

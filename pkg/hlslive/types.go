@@ -13,6 +13,25 @@ type Config struct {
 	InactiveIdleTimeout time.Duration // how long must be iactive stream idle to be considered as dead
 }
 
+func (c Config) withDefaultValues() Config {
+	if c.CleanupPeriod == 0 {
+		c.CleanupPeriod = 4 * time.Second
+	}
+	if c.PlaylistTimeout == 0 {
+		c.PlaylistTimeout = 60 * time.Second
+	}
+	if c.HlsMinimumSegments == 0 {
+		c.HlsMinimumSegments = 2
+	}
+	if c.ActiveIdleTimeout == 0 {
+		c.ActiveIdleTimeout = 12 * time.Second
+	}
+	if c.InactiveIdleTimeout == 0 {
+		c.InactiveIdleTimeout = 24 * time.Second
+	}
+	return c
+}
+
 type Manager interface {
 	Start() error
 	Stop()
