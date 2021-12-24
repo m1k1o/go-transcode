@@ -7,9 +7,9 @@ import (
 )
 
 type Config struct {
-	MediaPath     string // transcoded video input.
-	TranscodeDir  string // temporary directory to store transcoded elements.
-	SegmentPrefix string
+	MediaPath         string // transcoded video input
+	TranscodeDir      string // temporary directory to store transcoded elements
+	SegmentNamePrefix string // e.g. prefix-000001.ts
 
 	VideoProfile   *VideoProfile
 	VideoKeyframes bool

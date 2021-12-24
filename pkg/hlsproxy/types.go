@@ -7,10 +7,10 @@ import (
 )
 
 type Config struct {
-	PlaylistBaseUrl string
-	PlaylistPrefix  string
-	SegmentBaseUrl  string // optional: will be used playlist value if empty
-	SegmentPrefix   string // optional: will be used playlist value if empty
+	PlaylistBaseUrl    string
+	PlaylistPathPrefix string
+	SegmentBaseUrl     string // optional: will be used playlist value if empty
+	SegmentPathPrefix  string // optional: will be used playlist value if empty
 
 	CacheCleanupPeriod time.Duration // how often should be cache cleanup called
 	SegmentExpiration  time.Duration // how long should be segment kept in memory
@@ -21,8 +21,8 @@ func (c Config) withDefaultValues() Config {
 	if c.SegmentBaseUrl == "" {
 		c.SegmentBaseUrl = c.PlaylistBaseUrl
 	}
-	if c.SegmentPrefix == "" {
-		c.SegmentPrefix = c.PlaylistPrefix
+	if c.SegmentPathPrefix == "" {
+		c.SegmentPathPrefix = c.PlaylistPathPrefix
 	}
 	if c.CacheCleanupPeriod == 0 {
 		c.CacheCleanupPeriod = 4 * time.Second
@@ -37,8 +37,8 @@ func (c Config) withDefaultValues() Config {
 	c.PlaylistBaseUrl = strings.TrimRight(c.PlaylistBaseUrl, "/") + "/"
 	c.SegmentBaseUrl = strings.TrimRight(c.SegmentBaseUrl, "/") + "/"
 	// ensure it starts and ends with single /
-	c.PlaylistPrefix = "/" + strings.Trim(c.PlaylistPrefix, "/") + "/"
-	c.SegmentPrefix = "/" + strings.Trim(c.SegmentPrefix, "/") + "/"
+	c.PlaylistPathPrefix = "/" + strings.Trim(c.PlaylistPathPrefix, "/") + "/"
+	c.SegmentPathPrefix = "/" + strings.Trim(c.SegmentPathPrefix, "/") + "/"
 	return c
 }
 

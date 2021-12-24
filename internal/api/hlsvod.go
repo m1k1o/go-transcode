@@ -121,9 +121,9 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 
 			// create new manager
 			manager = hlsvod.New(&hlsvod.Config{
-				MediaPath:     vodMediaPath,
-				TranscodeDir:  transcodeDir,
-				SegmentPrefix: profileID,
+				MediaPath:         vodMediaPath,
+				TranscodeDir:      transcodeDir,
+				SegmentNamePrefix: profileID,
 
 				VideoProfile: &hlsvod.VideoProfile{
 					Width:   profile.Width,

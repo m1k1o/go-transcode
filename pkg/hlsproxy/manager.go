@@ -38,7 +38,7 @@ func (m *ManagerCtx) Shutdown() {
 }
 
 func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
-	url := m.config.PlaylistBaseUrl + strings.TrimPrefix(r.URL.String(), m.config.PlaylistPrefix)
+	url := m.config.PlaylistBaseUrl + strings.TrimPrefix(r.URL.String(), m.config.PlaylistPathPrefix)
 
 	cache, ok := m.getFromCache(url)
 	if !ok {
@@ -67,7 +67,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 
 		// TODO: Handle relative paths.
 		text := string(buf)
-		text = regexp.MustCompile(`(?m:^(https?\:\/\/[^\/]+)?\/)`).ReplaceAllString(text, m.config.SegmentPrefix)
+		text = regexp.MustCompile(`(?m:^(https?\:\/\/[^\/]+)?\/)`).ReplaceAllString(text, m.config.SegmentPathPrefix)
 
 		cache = m.saveToCache(url, strings.NewReader(text), m.config.PlaylistExpiration)
 	}
@@ -79,7 +79,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 }
 
 func (m *ManagerCtx) ServeSegment(w http.ResponseWriter, r *http.Request) {
-	url := m.config.SegmentBaseUrl + strings.TrimPrefix(r.URL.String(), m.config.SegmentPrefix)
+	url := m.config.SegmentBaseUrl + strings.TrimPrefix(r.URL.String(), m.config.SegmentPathPrefix)
 
 	cache, ok := m.getFromCache(url)
 	if !ok {

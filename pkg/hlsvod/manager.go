@@ -185,14 +185,14 @@ func (m *ManagerCtx) loadMetadata(ctx context.Context) error {
 }
 
 func (m *ManagerCtx) getSegmentName(index int) string {
-	return fmt.Sprintf("%s-%05d.ts", m.config.SegmentPrefix, index)
+	return fmt.Sprintf("%s-%05d.ts", m.config.SegmentNamePrefix, index)
 }
 
 func (m *ManagerCtx) parseSegmentIndex(segmentName string) (int, bool) {
 	regex := regexp.MustCompile(`^(.*)-([0-9]{5})\.ts$`)
 	matches := regex.FindStringSubmatch(segmentName)
 
-	if len(matches) != 3 || matches[1] != m.config.SegmentPrefix {
+	if len(matches) != 3 || matches[1] != m.config.SegmentNamePrefix {
 		return 0, false
 	}
 
@@ -355,7 +355,8 @@ func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
 	segments, err := TranscodeSegments(m.ctx, m.config.FFmpegBinary, TranscodeConfig{
 		InputFilePath: m.config.MediaPath,
 		OutputDirPath: m.config.TranscodeDir,
-		SegmentPrefix: m.config.SegmentPrefix, // This does not need to match.
+		// This does not need to be the same as chosen prefix.
+		SegmentPrefix: m.config.SegmentNamePrefix,
 
 		VideoProfile: m.config.VideoProfile,
 		AudioProfile: m.config.AudioProfile,
