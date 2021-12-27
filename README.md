@@ -152,8 +152,9 @@ The source code is in the following files/folders:
 
 - `.docker`: for docker support.
 - `cmd/` and `main.go`: source for the command-line interface.
-- `internal/`: internal source code modules.
-- `pkg/`: external modules as lib.
+- `internal/`: internal source code.
+- `modules/`: standalone plug'n'play modules.
+- `pkg/`: external packages ready to be reused.
 
 *TODO: document different modules/packages and dependencies*
 
