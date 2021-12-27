@@ -2,7 +2,6 @@ package utils
 
 import (
 	"io"
-	"net/http"
 	"sync"
 	"time"
 )
@@ -17,13 +16,13 @@ type Cache struct {
 	listeners   []func([]byte) (int, error)
 	listenersMu sync.RWMutex
 
-	Expires time.Time
+	expires time.Time
 }
 
 func NewCache(expires time.Time) *Cache {
 	return &Cache{
 		closeCh: make(chan struct{}),
-		Expires: expires,
+		expires: expires,
 	}
 }
 
@@ -64,9 +63,8 @@ func (c *Cache) Close() error {
 	return nil
 }
 
-func (c *Cache) ServeHTTP(w http.ResponseWriter) {
-	offset := 0
-	index := 0
+func (c *Cache) CopyTo(w io.Writer) error {
+	offset, index := 0, 0
 
 	for {
 		c.mu.RLock()
@@ -79,7 +77,11 @@ func (c *Cache) ServeHTTP(w http.ResponseWriter) {
 			chunk := c.chunks[index]
 			c.mu.RUnlock()
 
-			i, _ := w.Write(chunk)
+			i, err := w.Write(chunk)
+			if err != nil {
+				return err
+			}
+
 			offset += i
 			index++
 			continue
@@ -87,7 +89,11 @@ func (c *Cache) ServeHTTP(w http.ResponseWriter) {
 
 		// if stream is already closed
 		if closed {
-			return
+			var err error
+			if closer, ok := w.(io.WriteCloser); ok {
+				err = closer.Close()
+			}
+			return err
 		}
 
 		// we don't have enough data but stream is not closed
@@ -101,4 +107,9 @@ func (c *Cache) ServeHTTP(w http.ResponseWriter) {
 
 	// wait until it finishes
 	<-c.closeCh
+	return nil
+}
+
+func (c *Cache) Expired() bool {
+	return time.Now().After(c.expires)
 }

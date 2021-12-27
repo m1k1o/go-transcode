@@ -19,7 +19,7 @@ func (m *ManagerCtx) getFromCache(key string) (*utils.Cache, bool) {
 	}
 
 	// if cache has expired
-	if time.Now().After(entry.Expires) {
+	if entry.Expired() {
 		return nil, false
 	}
 
@@ -61,7 +61,7 @@ func (m *ManagerCtx) clearCache() {
 	m.cacheMu.Lock()
 	for key, entry := range m.cache {
 		// remove expired entries
-		if time.Now().After(entry.Expires) {
+		if entry.Expired() {
 			delete(m.cache, key)
 			m.logger.Debug().Str("key", key).Msg("cache cleanup remove expired")
 		} else {

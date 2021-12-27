@@ -75,7 +75,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
 	w.WriteHeader(200)
 
-	cache.ServeHTTP(w)
+	cache.CopyTo(w)
 }
 
 func (m *ManagerCtx) ServeSegment(w http.ResponseWriter, r *http.Request) {
@@ -104,5 +104,5 @@ func (m *ManagerCtx) ServeSegment(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "video/MP2T")
 	w.WriteHeader(200)
 
-	cache.ServeHTTP(w)
+	cache.CopyTo(w)
 }
