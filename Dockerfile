@@ -13,12 +13,14 @@ RUN go get -v -t -d .; \
 #
 # STAGE 2: build a small image
 #
-FROM alpine
+FROM alpine:edge
 WORKDIR /app
 
 #
 # install dependencies
-RUN apk add --no-cache bash ffmpeg
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
+RUN apu update
+RUN apk add --no-cache bash ffmpeg libva-utils
 
 COPY --from=builder /app/go-transcode go-transcode
 COPY profiles profiles
