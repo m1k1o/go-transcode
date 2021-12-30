@@ -9,7 +9,7 @@ if [[ "$VBUFSIZE" = "" ]]; then echo "Missing \$VBUFSIZE"; exit 1; fi
 #run vainfo to get exit code as output saved using $?
 vainfo 2>&1 > /dev/null
 #store exit code as support 0 means vaapi works 1 means software if cuda not detected
-VAAPISUPPORT=$($?)
+VAAPISUPPORT=$(echo $?)
 CUDASUPPORT="$(ffmpeg -init_hw_device list 2> /dev/null)"
 
 if echo $CUDASUPPORT | grep "cuda" > /dev/null; then
