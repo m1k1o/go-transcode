@@ -15,6 +15,16 @@ docker run --rm -d \
   -v "${PWD}/config.yaml:/app/config.yaml" go-transcode:latest
 ```
 
+# VAAPI Support
+
+```sh
+docker run --rm -d \
+  --name="go-transcode" \
+  --device=/dev/dri:/dev/dri \
+  -p "8080:8080" \
+  -v "${PWD}/config.yaml:/app/config.yaml" go-transcode:latest
+```
+
 # Nvidia GPU support
 
 You will need to have [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) installed.
