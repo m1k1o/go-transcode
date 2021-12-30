@@ -9,32 +9,36 @@ if [[ "$VBUFSIZE" = "" ]]; then echo "Missing \$VBUFSIZE"; exit 1; fi
 
 HWSUPPORT="$(ffmpeg -init_hw_device list 2> /dev/null)"
 
-if echo $HWSUPPORT | grep "^vaapi" > /dev/null; then
-	# TODO: vaapi support
-	#source "$(dirname "$0")/../.helpers.vaapi.sh"
-	echo "NOT using VAAPI hardware (CPU fallback)."
-	VF="scale=w=$VW:h=$VH:force_original_aspect_ratio=decrease"
-	CV="h264"
-elif echo $HWSUPPORT | grep "^cuda" > /dev/null; then
-	echo "Using CUDA hardware."
-	source "$(dirname "$0")/.helpers.cuda.sh"
-	INPUT="$(cuvid_codec "${1}")"
-	# ffmpeg parameters
-	EXTRAPARAMS="-hwaccel_output_format cuda -c:v "$INPUT""
-	# TODO: Why no force_original_aspect_ratio here?
-	VF="hwupload_cuda,yadif_cuda=0:-1:0,scale_npp=$VW:$VH:interp_algo=super"
-	CV="h264_nvenc"
+if echo $HWSUPPORT | grep "cuda" > /dev/null; then
+        echo "Using CUDA hardware."
+        source "$(dirname "$0")/.helpers.cuda.sh"
+        INPUT="$(cuvid_codec "${1}")"
+        # ffmpeg parameters
+        EXTRAPARAMS="-hwaccel_output_format cuda -c:v "$INPUT""
+        # TODO: Why no force_original_aspect_ratio here?
+        VF="hwupload_cuda,yadif_cuda=0:-1:0,scale_npp=$VW:$VH:interp_algo=super"
+        CV="h264_nvenc"
+elif echo $HWSUPPORT | grep "vaapi" > /dev/null; then
+        # TODO: vaapi support
+        source "$(dirname "$0")/.helpers.vaapi.sh"
+        #EXTRAPRAMAS="-hwaccel_output_format vaapi"
+        HWDECODE="-hwaccel vaapi -hwaccel_device /dev/dri/renderD128 -hwaccel_output_format vaapi"
+        echo "Using using VAAPI hardware (CPU fallback)."
+        VF="scale_vaapi=w=$VW:h=$VH:force_original_aspect_ratio=decrease"
+        CV="h264_vaapi"
 else
-	echo "Using CPU hardware."
-	VF="scale=w=$VW:h=$VH:force_original_aspect_ratio=decrease"
-	CV="h264"
+        echo "Using CPU hardware."
+        VF="scale=w=$VW:h=$VH:force_original_aspect_ratio=decrease"
+        CV="h264"
 fi
 
 exec ffmpeg -hide_banner -loglevel warning \
+   $HWDECODE \
   -i "${1}" $EXTRAPARAMS \
   -vf $VF \
     -c:a aac \
       -ar 48000 \
+      -ac 2 \
       -b:a $ABANDWIDTH \
     -c:v $CV \
       -profile:v main \
