@@ -19,7 +19,8 @@ if [ -z "$CV" ] || [ -z "$VF" ]; then
 fi
 
 exec ffmpeg -hide_banner -loglevel warning \
-  -i "$INPUT" $EXTRAPARAMS \
+  $EXTRAPARAMS \
+  -i "$INPUT" \
   -vf $VF \
     -c:a aac \
       -ar 48000 \
