@@ -18,9 +18,13 @@ WORKDIR /app
 
 #
 # install dependencies
-RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
-RUN apk update
-RUN apk add --no-cache bash ffmpeg libva-utils libva-vdpau-driver libva-intel-driver intel-media-driver mesa-va-gallium
+RUN apk add --no-cache bash ffmpeg
+
+#
+# install vdpau dependencies
+RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories; \
+    apk update; \
+    apk add --no-cache bash ffmpeg libva-utils libva-vdpau-driver libva-intel-driver intel-media-driver mesa-va-gallium
 
 COPY --from=builder /app/go-transcode go-transcode
 COPY profiles profiles

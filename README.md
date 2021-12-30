@@ -154,6 +154,7 @@ docker run --rm -d \
 ```
 
 ## VAAPI Support (docker)
+
 ```sh
 docker run --rm -d \
   --name="go-transcode" \
