@@ -91,7 +91,7 @@ elif [ "$VAAPI_SUPPORTED" = "yes" ]; then
     if [ "$?" = "1" ]; then
         echo "[ERR] VAAPI - Unsupported codec: H264" >&2
     else
-        echo "Using using VAAPI hardware." >&2
+        echo "Using VAAPI hardware." >&2
         export EXTRAPARAMS="-hwaccel vaapi -hwaccel_device $DRI_RENDER -hwaccel_output_format vaapi"
         export VF="scale_vaapi=w=$VW:h=$VH:force_original_aspect_ratio=decrease"
         export CV="h264_vaapi"
