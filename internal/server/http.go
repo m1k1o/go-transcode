@@ -52,11 +52,8 @@ func New(config *Config) *ServerManagerCtx {
 		logger.Info().Msgf("with pprof endpoint at %s", pprofPath)
 	}
 
-	// use custom 404
-	router.NotFound(func(w http.ResponseWriter, r *http.Request) {
-		//nolint
-		_, _ = w.Write([]byte("404"))
-	})
+	// we could use custom 404
+	router.NotFound(http.NotFound)
 
 	return &ServerManagerCtx{
 		logger: logger,
@@ -77,14 +74,14 @@ func (s *ServerManagerCtx) Start() {
 				s.logger.Panic().Err(err).Msg("unable to start https server")
 			}
 		}()
-		s.logger.Info().Msgf("https listening on %s", s.server.Addr)
+		s.logger.Info().Msgf("https server listening on %s", s.server.Addr)
 	} else {
 		go func() {
 			if err := s.server.ListenAndServe(); err != http.ErrServerClosed {
 				s.logger.Panic().Err(err).Msg("unable to start http server")
 			}
 		}()
-		s.logger.Info().Msgf("http listening on %s", s.server.Addr)
+		s.logger.Info().Msgf("http server listening on %s", s.server.Addr)
 	}
 }
 
@@ -97,4 +94,8 @@ func (s *ServerManagerCtx) Shutdown() error {
 
 func (s *ServerManagerCtx) Mount(fn func(r *chi.Mux)) {
 	fn(s.router)
+}
+
+func (s *ServerManagerCtx) Handle(pattern string, fn http.Handler) {
+	s.router.Handle(pattern, fn)
 }

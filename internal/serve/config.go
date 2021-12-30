@@ -1,11 +1,8 @@
-package config
+package serve
 
 import (
-	"fmt"
 	"os"
 	"path"
-
-	"github.com/m1k1o/go-transcode/internal/server"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -33,8 +30,15 @@ type VOD struct {
 	FFprobeBinary  string                  `mapstructure:"ffprobe-binary"`
 }
 
-type Server struct {
-	Server server.Config
+type Config struct {
+	Debug bool
+	PProf bool
+
+	Cert   string
+	Key    string
+	Bind   string
+	Static string
+	Proxy  bool
 
 	BaseDir  string            `yaml:"basedir,omitempty"`
 	Streams  map[string]string `yaml:"streams"`
@@ -44,9 +48,39 @@ type Server struct {
 	HlsProxy map[string]string
 }
 
-func (s *Server) Init(cmd *cobra.Command) error {
-	// TODO: Scope
-	if err := s.Server.Init(cmd); err != nil {
+func (Config) Init(cmd *cobra.Command) error {
+	cmd.PersistentFlags().BoolP("debug", "d", false, "enable debug mode")
+	if err := viper.BindPFlag("debug", cmd.PersistentFlags().Lookup("debug")); err != nil {
+		return err
+	}
+
+	cmd.PersistentFlags().Bool("pprof", false, "enable pprof endpoint available at /debug/pprof")
+	if err := viper.BindPFlag("pprof", cmd.PersistentFlags().Lookup("pprof")); err != nil {
+		return err
+	}
+
+	cmd.PersistentFlags().String("bind", "127.0.0.1:8080", "address/port/socket to serve neko")
+	if err := viper.BindPFlag("bind", cmd.PersistentFlags().Lookup("bind")); err != nil {
+		return err
+	}
+
+	cmd.PersistentFlags().String("cert", "", "path to the SSL cert used to secure the neko server")
+	if err := viper.BindPFlag("cert", cmd.PersistentFlags().Lookup("cert")); err != nil {
+		return err
+	}
+
+	cmd.PersistentFlags().String("key", "", "path to the SSL key used to secure the neko server")
+	if err := viper.BindPFlag("key", cmd.PersistentFlags().Lookup("key")); err != nil {
+		return err
+	}
+
+	cmd.PersistentFlags().String("static", "", "path to neko client files to serve")
+	if err := viper.BindPFlag("static", cmd.PersistentFlags().Lookup("static")); err != nil {
+		return err
+	}
+
+	cmd.PersistentFlags().Bool("proxy", false, "allow reverse proxies")
+	if err := viper.BindPFlag("proxy", cmd.PersistentFlags().Lookup("proxy")); err != nil {
 		return err
 	}
 
@@ -63,8 +97,15 @@ func (s *Server) Init(cmd *cobra.Command) error {
 	return nil
 }
 
-func (s *Server) Set() {
-	s.Server.Set()
+func (s *Config) Set() {
+	s.Debug = viper.GetBool("debug")
+	s.PProf = viper.GetBool("pprof")
+
+	s.Cert = viper.GetString("cert")
+	s.Key = viper.GetString("key")
+	s.Bind = viper.GetString("bind")
+	s.Static = viper.GetString("static")
+	s.Proxy = viper.GetBool("proxy")
 
 	s.BaseDir = viper.GetString("basedir")
 	if s.BaseDir == "" {
@@ -78,8 +119,7 @@ func (s *Server) Set() {
 
 	s.Profiles = viper.GetString("profiles")
 	if s.Profiles == "" {
-		// TODO: issue #5
-		s.Profiles = fmt.Sprintf("%s/profiles", s.BaseDir)
+		s.Profiles = path.Join(s.BaseDir, "profiles")
 	}
 	s.Streams = viper.GetStringMapString("streams")
 
@@ -130,7 +170,7 @@ func (s *Server) Set() {
 	s.HlsProxy = viper.GetStringMapString("hls-proxy")
 }
 
-func (s *Server) AbsPath(elem ...string) string {
+func (s *Config) AbsPath(elem ...string) string {
 	// prepend base path
 	elem = append([]string{s.BaseDir}, elem...)
 	return path.Join(elem...)
