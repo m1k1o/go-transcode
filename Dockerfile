@@ -19,7 +19,7 @@ WORKDIR /app
 #
 # install dependencies
 RUN echo "https://dl-cdn.alpinelinux.org/alpine/edge/testing" >> /etc/apk/repositories
-RUN apu update
+RUN apk update
 RUN apk add --no-cache bash ffmpeg libva-utils
 
 COPY --from=builder /app/go-transcode go-transcode
