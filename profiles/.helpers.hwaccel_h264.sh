@@ -72,7 +72,8 @@ function vaapi_check_supported_codecs {
 #
 
 if [ "$CUDA_SUPPORTED" = "yes" ]; then
-    AVAILABLE_DECODERS="$(ffmpeg -hide_banner -decoders | grep _cuvid | cut -d ' ' -f3)"
+    AVAILABLE_DECODERS="$(ffmpeg -hide_banner -decoders | grep _cuvid | cut -d ' ' -f3 | xargs)"
+    AVAILABLE_FILTERS="$(ffmpeg -hide_banner -filters | grep cuda | cut -d ' ' -f3 | xargs)"
 
     CUVID_DECODER="$(cuvid_decoder_from_codec "$INPUT")"
     if [ "$?" = "1" ]; then
@@ -82,8 +83,18 @@ if [ "$CUDA_SUPPORTED" = "yes" ]; then
     else
         echo "Using CUDA hardware, with decoder $CUVID_DECODER." >&2
         export EXTRAPARAMS="-hwaccel_output_format cuda -c:v $CUVID_DECODER"
-        # TODO: Why no force_original_aspect_ratio here?
-        export VF="hwupload_cuda,yadif_cuda=0:-1:0,scale_npp=$VW:$VH:interp_algo=super"
+
+        # Check if filters are available
+        if [[ " ${AVAILABLE_FILTERS} " =~ " hwupload_cuda " ]] &&
+            [[ " ${AVAILABLE_FILTERS} " =~ " yadif_cuda " ]] &&
+            [[ " ${AVAILABLE_FILTERS} " =~ " scale_cuda " ]]; then
+            echo "Using CUDA filters" >&2
+            export VF="hwupload_cuda,yadif_cuda=0:-1:0,scale_cuda=$VW:$VH:interp_algo=super:force_original_aspect_ratio=decrease"
+        else
+            echo "CUDA filters are not available" >&2
+            export VF="scale=$VW:$VH:force_original_aspect_ratio=decrease"
+        fi
+
         export CV="h264_nvenc"
     fi
 elif [ "$VAAPI_SUPPORTED" = "yes" ]; then
