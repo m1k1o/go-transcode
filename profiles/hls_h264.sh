@@ -6,10 +6,13 @@ if [[ "$ABANDWIDTH" = "" ]]; then echo "Missing \$ABANDWIDTH"; exit 1; fi
 if [[ "$VBANDWIDTH" = "" ]]; then echo "Missing \$VBANDWIDTH"; exit 1; fi
 if [[ "$VMAXRATE" = "" ]]; then echo "Missing \$VMAXRATE"; exit 1; fi
 if [[ "$VBUFSIZE" = "" ]]; then echo "Missing \$VBUFSIZE"; exit 1; fi
+#run vainfo to get exit code as output saved using $?
+vainfo 2>&1 > /dev/null
+#store exit code as support 0 means vaapi works 1 means software if cuda not detected
+VAAPISUPPORT=$($?)
+CUDASUPPORT="$(ffmpeg -init_hw_device list 2> /dev/null)"
 
-HWSUPPORT="$(ffmpeg -init_hw_device list 2> /dev/null)"
-
-if echo $HWSUPPORT | grep "cuda" > /dev/null; then
+if echo $CUDASUPPORT | grep "cuda" > /dev/null; then
         echo "Using CUDA hardware."
         source "$(dirname "$0")/.helpers.cuda.sh"
         INPUT="$(cuvid_codec "${1}")"
@@ -18,7 +21,8 @@ if echo $HWSUPPORT | grep "cuda" > /dev/null; then
         # TODO: Why no force_original_aspect_ratio here?
         VF="hwupload_cuda,yadif_cuda=0:-1:0,scale_npp=$VW:$VH:interp_algo=super"
         CV="h264_nvenc"
-elif echo $HWSUPPORT | grep "vaapi" > /dev/null; then
+fi
+if [ "$VAAPISUPPORT" -eq "0" ]; then
         # TODO: vaapi support
         source "$(dirname "$0")/.helpers.vaapi.sh"
         #EXTRAPRAMAS="-hwaccel_output_format vaapi"
