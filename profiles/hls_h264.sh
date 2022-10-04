@@ -40,7 +40,6 @@ exec ffmpeg -hide_banner -loglevel warning \
   -f hls \
     -hls_time 2 \
     -hls_list_size 5 \
-    -hls_wrap 10 \
     -hls_delete_threshold 1 \
     -hls_flags delete_segments+second_level_segment_index \
     -hls_start_number_source datetime \
