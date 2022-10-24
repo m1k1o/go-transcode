@@ -1,8 +1,0 @@
-#!/bin/sh
-cd "$(dirname "$0")"
-
-docker run -it --rm \
-    -v "${PWD}/../:/app" \
-    --entrypoint="go" \
-    --volume "${PWD}/../:/app" \
-    transcode_server_img "$@";

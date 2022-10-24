@@ -1,0 +1,5 @@
+#!/bin/sh
+cd "$(dirname "$0")"
+
+BUILD_TAG="${1:-transcode_server_img}"
+docker build -t "${BUILD_TAG}" -f Dockerfile ..

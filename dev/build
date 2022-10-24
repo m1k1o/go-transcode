@@ -1,4 +1,0 @@
-#!/bin/sh
-cd "$(dirname "$0")"
-
-docker build -t transcode_server_img ..

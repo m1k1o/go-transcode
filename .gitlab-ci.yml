@@ -14,7 +14,7 @@ build:
   variables:
     BASE_IMAGE: $CI_REGISTRY_IMAGE:latest
   script:
-    - docker build -t $BASE_IMAGE .
+    - docker build -t $BASE_IMAGE -f ./docker/Dockerfile .
     - docker push $BASE_IMAGE
   only:
     - master
@@ -25,7 +25,7 @@ build nivdia:
     GO_TRANSCODE_IMAGE: $CI_REGISTRY_IMAGE:latest
     IMAGE_TAG: $CI_REGISTRY_IMAGE/nivdia:latest
   script:
-    - docker build --build-arg "GO_TRANSCODE_IMAGE=${GO_TRANSCODE_IMAGE}" --build-arg "BASE_IMAGE=${NVIDIA_FFMPEG_IMAGE}" -t $IMAGE_TAG -f Dockerfile.nvidia .
+    - docker build --build-arg "GO_TRANSCODE_IMAGE=${GO_TRANSCODE_IMAGE}" --build-arg "BASE_IMAGE=${NVIDIA_FFMPEG_IMAGE}" -t $IMAGE_TAG -f ./docker/Dockerfile.nvidia .
     - docker push $IMAGE_TAG
   only:
     - master
