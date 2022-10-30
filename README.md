@@ -58,7 +58,7 @@ bind: localhost:8888
 # serve static files from this directory (optional)
 static: /var/www/html
 
-# TODO: issue #4
+# X-Forwarded-For headers will be used to determine the client IP
 proxy: true
 
 # For live streaming
