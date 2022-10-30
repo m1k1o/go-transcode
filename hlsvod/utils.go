@@ -8,6 +8,20 @@ import (
 	"time"
 )
 
+/**
+ * Calculate the timestamps to segment the video at.
+ * Returns all segments endpoints, including video starting time (0) and end time.
+ *
+ * - Use keyframes (i.e. I-frame) as much as possible.
+ * - For each key frame, if it's over (maxSegmentLength) seconds since the last keyframe, insert a breakpoint between them in an evenly,
+ *   such that the breakpoint distance is <= (segmentLength) seconds (per https://bitmovin.com/mpeg-dash-hls-segment-length/).
+ *   Example:
+ *    segmentLength = 3.5
+ *    key frame at 20.00 and 31.00, split at 22.75, 25.5, 28.25.
+ * - If the duration between two key frames is smaller than (minSegmentLength) seconds, ignore the existance of the second key frame.
+ *
+ * This guarantees that all segments are between the duration (minSegmentLength) seconds and (maxSegmentLength) seconds.
+ */
 func convertToSegments(rawTimeList []float64, duration time.Duration, segmentLength float64, segmentOffset float64) []float64 {
 	durationSec := duration.Seconds()
 	minSegmentLength := segmentLength - segmentOffset
@@ -24,14 +38,14 @@ func convertToSegments(rawTimeList []float64, duration time.Duration, segmentLen
 		}
 
 		// use it as-is
-		if time-lastTime < maxSegmentLength {
+		if time-lastTime > minSegmentLength && time-lastTime < maxSegmentLength {
 			lastTime = time
 			segmentStartTimes = append(segmentStartTimes, lastTime)
 			continue
 		}
 
 		// count segments between current and last time
-		numOfSegmentsNeeded := math.Ceil((time - lastTime) / segmentLength)
+		numOfSegmentsNeeded := math.Round((time - lastTime) / segmentLength)
 		durationOfEach := (time - lastTime) / numOfSegmentsNeeded
 		for i := 1; i < int(numOfSegmentsNeeded); i++ {
 			lastTime += durationOfEach
