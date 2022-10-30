@@ -29,6 +29,10 @@ func New(config *config.Server) *HttpManagerCtx {
 	router.Use(middleware.RequestLogger(&logformatter{logger}))
 	router.Use(middleware.Recoverer) // Recover from panics without crashing server
 
+	if config.Proxy {
+		router.Use(middleware.RealIP)
+	}
+
 	// serve static files
 	if config.Static != "" {
 		fs := http.FileServer(http.Dir(config.Static))

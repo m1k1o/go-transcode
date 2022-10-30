@@ -98,7 +98,7 @@ func (Server) Init(cmd *cobra.Command) error {
 		return err
 	}
 
-	cmd.PersistentFlags().Bool("proxy", false, "allow reverse proxies")
+	cmd.PersistentFlags().Bool("proxy", false, "allow reverse proxies: X-Forwarded-For headers will be used to determine the client IP")
 	if err := viper.BindPFlag("proxy", cmd.PersistentFlags().Lookup("proxy")); err != nil {
 		return err
 	}
