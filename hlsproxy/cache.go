@@ -28,9 +28,9 @@ func (m *ManagerCtx) getFromCache(key string) (*utils.Cache, bool) {
 	return entry, true
 }
 
-func (m *ManagerCtx) saveToCache(key string, reader io.Reader, duration time.Duration) *utils.Cache {
+func (m *ManagerCtx) saveToCache(key string, reader io.Reader, expires time.Time) *utils.Cache {
 	m.cacheMu.Lock()
-	cache := utils.NewCache(time.Now().Add(duration))
+	cache := utils.NewCache(expires)
 	m.cache[key] = cache
 	m.cacheMu.Unlock()
 

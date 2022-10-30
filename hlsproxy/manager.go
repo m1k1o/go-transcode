@@ -67,7 +67,8 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		defer resp.Body.Close()
 
 		if resp.StatusCode < 200 && resp.StatusCode >= 300 {
-			defer resp.Body.Close()
+			// read all response body
+			io.Copy(io.Discard, resp.Body)
 
 			m.logger.Err(err).Int("code", resp.StatusCode).Msg("invalid HTTP response")
 			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
@@ -84,7 +85,7 @@ func (m *ManagerCtx) ServePlaylist(w http.ResponseWriter, r *http.Request) {
 		var re = regexp.MustCompile(`(?m:^(https?\:\/\/[^\/]+)?\/)`)
 		text := re.ReplaceAllString(string(buf), m.prefix)
 
-		cache = m.saveToCache(url, strings.NewReader(text), playlistExpiration)
+		cache = m.saveToCache(url, strings.NewReader(data), time.Now().Add(playlistExpiration))
 	}
 
 	w.Header().Set("Content-Type", "application/vnd.apple.mpegurl")
@@ -106,14 +107,16 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if resp.StatusCode < 200 && resp.StatusCode >= 300 {
-			defer resp.Body.Close()
+			// read all response body
+			io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
 
 			m.logger.Err(err).Int("code", resp.StatusCode).Msg("invalid HTTP response")
 			http.Error(w, http.StatusText(http.StatusBadGateway), http.StatusBadGateway)
 			return
 		}
 
-		cache = m.saveToCache(url, resp.Body, segmentExpiration)
+		cache = m.saveToCache(url, resp.Body, time.Now().Add(segmentExpiration))
 	}
 
 	w.Header().Set("Content-Type", "video/MP2T")
