@@ -365,8 +365,16 @@ func (m *ManagerCtx) waitForSegment(index int) (chan struct{}, bool) {
 func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
 	logger := m.logger.With().Int("offset", offset).Int("limit", limit).Logger()
 
-	segmentTimes := m.breakpoints[offset : offset+limit+1]
+	end := offset + limit + 1
+	if end > len(m.breakpoints) {
+		end = len(m.breakpoints)
+	}
+	segmentTimes := m.breakpoints[offset:end]
 	logger.Info().Interface("segments-times", segmentTimes).Msg("transcoding segments")
+
+	if len(segmentTimes) < 2 {
+		return nil
+	}
 
 	segments, err := TranscodeSegments(m.ctx, m.config.FFmpegBinary, TranscodeConfig{
 		InputFilePath: m.config.MediaPath,
