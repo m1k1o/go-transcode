@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -21,7 +22,12 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 		logger := log.With().Str("module", "hlsvod").Logger()
 
 		// remove /vod/ from path
-		urlPath := r.URL.Path[5:]
+		urlPath, err := url.PathUnescape(r.URL.Path[5:])
+		if err != nil {
+			logger.Error().Err(err).Msg("Failed to unescape URL path")
+			http.Error(w, "Failed to unescape URL path", http.StatusBadRequest)
+			return
+		}
 
 		// get index of last slash from path
 		lastSlashIndex := strings.LastIndex(urlPath, "/")
