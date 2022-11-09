@@ -2,7 +2,6 @@ package hlsvod
 
 import (
 	"fmt"
-	"math"
 	"sort"
 	"strings"
 	"time"
@@ -30,11 +29,9 @@ func convertToSegments(rawTimeList []float64, duration time.Duration, segmentLen
 			continue
 		}
 
-		// count segments between current and last time
-		numOfSegmentsNeeded := math.Ceil((time - lastTime) / segmentLength)
-		durationOfEach := (time - lastTime) / numOfSegmentsNeeded
-		for i := 1; i < int(numOfSegmentsNeeded); i++ {
-			lastTime += durationOfEach
+		// create as many segments as possible with perfect size
+		for (time - lastTime) > segmentLength {
+			lastTime += segmentLength
 			segmentStartTimes = append(segmentStartTimes, lastTime)
 		}
 
