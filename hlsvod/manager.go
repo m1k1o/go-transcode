@@ -420,12 +420,18 @@ func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
 
 func (m *ManagerCtx) transcodeFromSegment(index int) error {
 	segmentsTotal := len(m.segments)
-	if index+m.segmentBufferMax < segmentsTotal {
+	if segmentsTotal <= m.segmentBufferMax {
+		// if all our segments can fit in the buffer
+		// then we should transcode all of them
+		// regardless of the index
+		index = 0
+	} else if index+m.segmentBufferMax < segmentsTotal {
+		// cap transocded segments to the buffer size
 		segmentsTotal = index + m.segmentBufferMax
 	}
 
 	offset, limit := 0, 0
-	for i := index; i < segmentsTotal; i++ {
+	for i := index; i < segmentsTotal-1; i++ {
 		_, isEnqueued := m.waitForSegment(i)
 		isTranscoded := m.isSegmentTranscoded(i)
 
@@ -443,8 +449,9 @@ func (m *ManagerCtx) transcodeFromSegment(index int) error {
 		}
 	}
 
-	// if offset is greater than our minimal offset, we have enough segments available
-	if offset > m.segmentBufferMin {
+	// if offset is greater than our minimal offset,
+	// or limit is 0, we have enough segments available
+	if offset > m.segmentBufferMin || limit == 0 {
 		return nil
 	}
 
