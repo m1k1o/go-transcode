@@ -3,3 +3,4 @@
 /go-transcode
 /bin
 /.env
+.vscode/

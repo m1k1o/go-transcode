@@ -22,7 +22,7 @@ func (a *ApiManagerCtx) Http(r chi.Router) {
 		// dummy input for testing purposes
 		file := a.config.AbsPath("profiles", "http-test.sh")
 		cmd := exec.Command(file)
-		logger.Info().Msg("command startred")
+		logger.Info().Msg("command started")
 
 		read, write := io.Pipe()
 		cmd.Stdout = write
