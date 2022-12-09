@@ -25,6 +25,7 @@ const readyTimeout = 80 * time.Second
 const transcodeTimeout = 10 * time.Second
 
 type ManagerCtx struct {
+	mu     sync.Mutex
 	logger zerolog.Logger
 	config Config
 
@@ -441,6 +442,9 @@ func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
 }
 
 func (m *ManagerCtx) transcodeFromSegment(index int) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	segmentsTotal := len(m.segments)
 	if segmentsTotal <= m.segmentBufferMax {
 		// if all our segments can fit in the buffer
