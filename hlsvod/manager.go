@@ -344,6 +344,19 @@ func (m *ManagerCtx) enqueueSegments(offset, limit int) {
 	}
 }
 
+func (m *ManagerCtx) dequeueSegments(offset, limit int) {
+	m.segmentQueueMu.Lock()
+	defer m.segmentQueueMu.Unlock()
+
+	// remove segment signaling channels queue
+	for i := offset; i < offset+limit; i++ {
+		if res, ok := m.segmentQueue[i]; ok {
+			close(res)
+			delete(m.segmentQueue, i)
+		}
+	}
+}
+
 func (m *ManagerCtx) dequeueSegment(index int) {
 	m.segmentQueueMu.Lock()
 	defer m.segmentQueueMu.Unlock()
@@ -388,15 +401,14 @@ func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
 	// create new segment signaling channels queue
 	m.enqueueSegments(offset, limit)
 
-	index := offset
-	logger.Info().Msg("transcode process started")
-
 	go func() {
+		index := offset
+		logger.Info().Msg("transcode process started")
+
 		for {
 			segmentName, ok := <-segments
 			if !ok {
-				logger.Info().Int("index", index).Msg("transcode process finished")
-				return
+				break
 			}
 
 			logger.Info().
@@ -412,6 +424,16 @@ func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
 
 			// expect new segment to come
 			index++
+		}
+
+		// check if all segments were transcoded
+		if index < offset+limit {
+			// clear segments queue if not all segments were transcoded
+			m.dequeueSegments(offset, limit)
+
+			logger.Warn().Msg("transcode process finished, but not all segments were transcoded")
+		} else {
+			logger.Info().Msg("transcode process finished")
 		}
 	}()
 
@@ -559,7 +581,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 			// now segment should be available
 			segmentPath, ok = m.getSegment(index)
 			if !ok || segmentPath == "" {
-				// this should never happen
+				// can happen if transcode failed
 				m.logger.Error().Int("index", index).Msg("segment not found even after transcoding")
 				http.Error(w, "409 segment not found even after transcoding", http.StatusConflict)
 				return
