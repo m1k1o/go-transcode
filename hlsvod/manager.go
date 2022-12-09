@@ -411,6 +411,19 @@ func (m *ManagerCtx) transcodeSegments(offset, limit int) error {
 				break
 			}
 
+			// if we have more segments than expected
+			if index >= offset+limit {
+				logger.Warn().
+					Int("index", index).
+					Str("segment", segmentName).
+					Msg("transcode process returned more segments than expected, ignoring")
+
+				// only for logging purposes
+				index++
+
+				continue
+			}
+
 			logger.Info().
 				Int("index", index).
 				Str("segment", segmentName).
