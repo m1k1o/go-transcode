@@ -3,7 +3,7 @@ name: "CI for builds"
 on:
   push:
     tags:
-      - '*'
+      - 'v*'
 
 jobs:
   build-amd64:
