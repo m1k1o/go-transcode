@@ -163,6 +163,10 @@ docker run --rm -d \
   -v "${PWD}/config.yaml:/app/config.yaml" go-transcode:latest
 ```
 
+## VDPAU Support (docker)
+
+To use VDPAU, you need to build the image with `--build-arg VDPAU=1`.
+
 ## Nvidia GPU support (docker)
 
 You will need to have [nvidia-docker](https://github.com/NVIDIA/nvidia-docker) installed.
