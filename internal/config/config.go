@@ -1,9 +1,14 @@
 package config
 
 import (
+	"encoding/xml"
 	"fmt"
+	"io/ioutil"
+	"net/http"
+	"net/url"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -62,6 +67,24 @@ type VOD struct {
 	FFprobeBinary  string                  `mapstructure:"ffprobe-binary"`
 }
 
+type ENIGMA2 struct {
+	IP        string `mapstructure:"ip"`
+	Port      string `mapstructure:"port"`
+	Bouquet   string `mapstructure:"bouquet"`
+	Reference string
+}
+
+type ServiceList struct {
+	XMLName     xml.Name  `xml:"e2servicelist"`
+	ServiceList []Service `xml:"e2service"`
+}
+
+type Service struct {
+	XMLName   xml.Name `xml:"e2service"`
+	Name      string   `xml:"e2servicename"`
+	Reference string   `xml:"e2servicereference"`
+}
+
 type Server struct {
 	Cert   string
 	Key    string
@@ -72,6 +95,8 @@ type Server struct {
 	BaseDir  string            `yaml:"basedir,omitempty"`
 	Streams  map[string]string `yaml:"streams"`
 	Profiles string            `yaml:"profiles,omitempty"`
+
+	Enigma2 ENIGMA2
 
 	Vod      VOD
 	HlsProxy map[string]string
@@ -185,10 +210,73 @@ func (s *Server) Set() {
 	// HLS PROXY
 	//
 	s.HlsProxy = viper.GetStringMapString("hls-proxy")
+
+	//
+	// Enigma2
+	//
+	if err := viper.UnmarshalKey("enigma2", &s.Enigma2); err != nil {
+		panic(err)
+	}
+
+	if s.Enigma2.IP != "" && s.Enigma2.Port != "" {
+		if s.Enigma2.Bouquet == "" {
+			s.Enigma2.Bouquet = "Favourites (TV)"
+		}
+		xmlBytes, err := getXML("http://" + s.Enigma2.IP + "/web/getservices")
+		if err != nil {
+			panic(err)
+		}
+		var services ServiceList
+		xml.Unmarshal(xmlBytes, &services)
+
+		for i := 0; i < len(services.ServiceList); i++ {
+			if services.ServiceList[i].Name == s.Enigma2.Bouquet {
+				s.Enigma2.Reference = services.ServiceList[i].Reference
+			}
+		}
+
+		if s.Enigma2.Reference != "" {
+			xmlBytes, err := getXML("http://" + s.Enigma2.IP + "/web/getservices?sRef=" + url.QueryEscape(s.Enigma2.Reference))
+			if err != nil {
+				panic(err)
+			}
+			var channels ServiceList
+			xml.Unmarshal(xmlBytes, &channels)
+			for i := 0; i < len(channels.ServiceList); i++ {
+				s.Streams[channelName(channels.ServiceList[i].Name)] = "http://" + s.Enigma2.IP + ":" + s.Enigma2.Port + "/" + channels.ServiceList[i].Reference
+			}
+		}
+	}
 }
 
 func (s *Server) AbsPath(elem ...string) string {
 	// prepend base path
 	elem = append([]string{s.BaseDir}, elem...)
 	return path.Join(elem...)
+}
+
+func getXML(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return []byte{}, fmt.Errorf("GET error: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return []byte{}, fmt.Errorf("Status error: %v", resp.StatusCode)
+	}
+
+	data, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return []byte{}, fmt.Errorf("Read body: %v", err)
+	}
+
+	return data, nil
+}
+
+func channelName(name string) string {
+	name = strings.ToLower(name)
+	name = strings.ReplaceAll(name, " ", "_")
+	name = strings.ReplaceAll(name, "-", "_")
+	return name
 }
