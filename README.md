@@ -67,6 +67,17 @@ streams:
   ch1_hd: http://192.168.1.34:9981/stream/channelid/85
   ch2_hd: http://192.168.1.34:9981/stream/channelid/43
 
+# To import channels from enigma2
+enigma2:
+  # address of your enigma2 device (if using password, use http://user:pass@host:port)
+  webif-url: http://192.168.1.10/
+  # (optional) address of your enigma2 stream server, if empty, webif-url will be used with port 8001
+  stream-url: http://192.168.1.10:8001/
+  # name of the bouquet to import channels from
+  bouquet: "SKY Germany HD"
+  # reference to the bouquet to import channels from (use instead of bouquet name)
+  reference: "1:7:1:0:0:0:0:0:0:0:FROM BOUQUET "userbouquet.dbe0e.tv" ORDER BY bouquet"
+
 # For static files
 vod:
   # Source, where are static files, that will be transcoded
