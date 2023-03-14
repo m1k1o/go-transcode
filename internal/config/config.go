@@ -3,12 +3,10 @@ package config
 import (
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/url"
 	"os"
 	"path"
-	"strings"
+
+	"github.com/rs/zerolog/log"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -67,10 +65,10 @@ type VOD struct {
 	FFprobeBinary  string                  `mapstructure:"ffprobe-binary"`
 }
 
-type ENIGMA2 struct {
-	IP        string `mapstructure:"ip"`
-	Port      string `mapstructure:"port"`
-	Bouquet   string `mapstructure:"bouquet"`
+type Enigma2 struct {
+	WebifUrl  string `mapstructure:"webif-url"`
+	StreamUrl string `mapstructure:"stream-url"`
+	Bouquet   string
 	Reference string
 }
 
@@ -96,7 +94,7 @@ type Server struct {
 	Streams  map[string]string `yaml:"streams"`
 	Profiles string            `yaml:"profiles,omitempty"`
 
-	Enigma2 ENIGMA2
+	Enigma2 Enigma2
 
 	Vod      VOD
 	HlsProxy map[string]string
@@ -218,34 +216,17 @@ func (s *Server) Set() {
 		panic(err)
 	}
 
-	if s.Enigma2.IP != "" && s.Enigma2.Port != "" {
-		if s.Enigma2.Bouquet == "" {
-			s.Enigma2.Bouquet = "Favourites (TV)"
-		}
-		xmlBytes, err := getXML("http://" + s.Enigma2.IP + "/web/getservices")
+	if s.Enigma2.WebifUrl != "" {
+		enigma2Streams, err := parseEnigma2Config(s.Enigma2)
 		if err != nil {
 			panic(err)
 		}
-		var services ServiceList
-		xml.Unmarshal(xmlBytes, &services)
 
-		for i := 0; i < len(services.ServiceList); i++ {
-			if services.ServiceList[i].Name == s.Enigma2.Bouquet {
-				s.Enigma2.Reference = services.ServiceList[i].Reference
-			}
+		for k, v := range enigma2Streams {
+			s.Streams[k] = v
 		}
 
-		if s.Enigma2.Reference != "" {
-			xmlBytes, err := getXML("http://" + s.Enigma2.IP + "/web/getservices?sRef=" + url.QueryEscape(s.Enigma2.Reference))
-			if err != nil {
-				panic(err)
-			}
-			var channels ServiceList
-			xml.Unmarshal(xmlBytes, &channels)
-			for i := 0; i < len(channels.ServiceList); i++ {
-				s.Streams[channelName(channels.ServiceList[i].Name)] = "http://" + s.Enigma2.IP + ":" + s.Enigma2.Port + "/" + channels.ServiceList[i].Reference
-			}
-		}
+		log.Info().Msgf("loaded %d streams from Enigma2", len(enigma2Streams))
 	}
 }
 
@@ -253,30 +234,4 @@ func (s *Server) AbsPath(elem ...string) string {
 	// prepend base path
 	elem = append([]string{s.BaseDir}, elem...)
 	return path.Join(elem...)
-}
-
-func getXML(url string) ([]byte, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return []byte{}, fmt.Errorf("GET error: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return []byte{}, fmt.Errorf("Status error: %v", resp.StatusCode)
-	}
-
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return []byte{}, fmt.Errorf("Read body: %v", err)
-	}
-
-	return data, nil
-}
-
-func channelName(name string) string {
-	name = strings.ToLower(name)
-	name = strings.ReplaceAll(name, " ", "_")
-	name = strings.ReplaceAll(name, "-", "_")
-	return name
 }
