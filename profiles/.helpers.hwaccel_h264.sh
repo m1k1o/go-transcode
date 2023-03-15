@@ -2,6 +2,18 @@
 INIT_HW_DEVICE="$(ffmpeg -init_hw_device list 2> /dev/null)"
 
 #
+# Apple Silicon
+#
+VIDEOTOOLBOX="yes"
+
+if echo "$INIT_HW_DEVICE" | grep "videotoolbox" > /dev/null; then
+    echo "[OK] Videotoolbox is supported by ffmpeg" >&2
+else
+    echo "[ERR]Videotoolbox is supported by ffmpeg" >&2
+    VIDEOTOOLBOX="no"
+fi
+
+#
 # CUDA
 #
 CUDA_SUPPORTED="yes"
@@ -107,6 +119,11 @@ elif [ "$VAAPI_SUPPORTED" = "yes" ]; then
         export VF="scale_vaapi=w=$VW:h=$VH:force_original_aspect_ratio=decrease"
         export CV="h264_vaapi"
     fi
+elif [ "$VIDEOTOOLBOX" = "yes" ]; then
+    echo "Using Videotoolbox h264_videotoolbox." >&2
+    export EXTRAOUTPUTPARAMS="-q:v 80"
+    export VF="scale=w=$VW:h=$VH:force_original_aspect_ratio=decrease"
+    export CV="h264_videotoolbox"
 else
     echo "No hardware acceleration available." >&2
 fi

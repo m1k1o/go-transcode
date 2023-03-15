@@ -37,6 +37,7 @@ exec ffmpeg -hide_banner -loglevel warning \
       -sc_threshold 0 \
       -g 48 \
       -keyint_min 48 \
+    $EXTRAOUTPUTPARAMS \
   -f hls \
     -hls_time 2 \
     -hls_list_size 5 \
