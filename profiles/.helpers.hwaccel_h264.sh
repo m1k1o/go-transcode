@@ -9,7 +9,7 @@ VIDEOTOOLBOX="yes"
 if echo "$INIT_HW_DEVICE" | grep "videotoolbox" > /dev/null; then
     echo "[OK] Videotoolbox is supported by ffmpeg" >&2
 else
-    echo "[ERR]Videotoolbox is not supported by ffmpeg" >&2
+    echo "[ERR] Videotoolbox is not supported by ffmpeg" >&2
     VIDEOTOOLBOX="no"
 fi
 
