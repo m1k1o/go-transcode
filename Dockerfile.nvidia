@@ -23,7 +23,7 @@ COPY --from=build /app/go-transcode go-transcode
 COPY profiles profiles
 
 ENV USER=$USERNAME
-ENV NVIDIA_DRIVER_CAPABILITIES=compute,utility,video
+ENV NVIDIA_DRIVER_CAPABILITIES=all
 
 EXPOSE 8080
 ENV TRANSCODE_BIND=:8080
