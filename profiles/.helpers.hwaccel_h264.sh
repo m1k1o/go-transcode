@@ -99,9 +99,9 @@ if [ "$CUDA_SUPPORTED" = "yes" ]; then
         # Check if filters are available
         if [[ " ${AVAILABLE_FILTERS} " =~ " hwupload_cuda " ]] &&
             [[ " ${AVAILABLE_FILTERS} " =~ " yadif_cuda " ]] &&
-            [[ " ${AVAILABLE_FILTERS} " =~ " scale_cuda " ]]; then
+            [[ " ${AVAILABLE_FILTERS} " =~ " scale_npp " ]]; then
             echo "Using CUDA filters" >&2
-            export VF="hwupload_cuda,yadif_cuda=0:-1:0,scale_cuda=$VW:$VH:interp_algo=super:force_original_aspect_ratio=decrease"
+            export VF="hwupload_cuda,yadif_cuda=0:-1:0,scale_npp=$VW:$VH:interp_algo=super:force_original_aspect_ratio=decrease"
         else
             echo "CUDA filters are not available" >&2
             export VF="scale=$VW:$VH:force_original_aspect_ratio=decrease"
