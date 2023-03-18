@@ -7,4 +7,4 @@ export VBANDWIDTH="2800k"
 export VMAXRATE="2996k"
 export VBUFSIZE="4200k"
 
-"$(dirname "$0")"/../hls_h264.sh "$1"
+exec "$(dirname "$0")"/../hls_h264.sh "$1"
