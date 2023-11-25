@@ -6,8 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-chi/chi"
-	"github.com/go-chi/chi/middleware"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -85,6 +85,10 @@ func (s *HttpManagerCtx) Shutdown() error {
 	defer cancel()
 
 	return s.http.Shutdown(ctx)
+}
+
+func (s *HttpManagerCtx) WithProfiler() {
+	s.router.Mount("/debug", middleware.Profiler())
 }
 
 func (s *HttpManagerCtx) Mount(fn func(r *chi.Mux)) {

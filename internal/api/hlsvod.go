@@ -10,9 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/go-chi/chi"
-	"github.com/m1k1o/go-transcode/hlsvod"
+	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
+
+	"github.com/m1k1o/go-transcode/hlsvod"
 )
 
 var hlsVodManagers map[string]hlsvod.Manager = make(map[string]hlsvod.Manager)
