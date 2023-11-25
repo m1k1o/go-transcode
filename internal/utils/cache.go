@@ -65,20 +65,21 @@ func (c *Cache) Close() error {
 }
 
 func (c *Cache) ServeHTTP(w http.ResponseWriter) {
-	offset := 0
-	index := 0
+	offset, index := 0, 0
 
 	for {
+		// read current state
 		c.mu.RLock()
 		length, closed := c.length, c.closed
+		hasData := offset < length
+		var chunk []byte
+		if hasData {
+			chunk = c.chunks[index]
+		}
 		c.mu.RUnlock()
 
 		// if we have enough available data
-		if offset < length {
-			c.mu.RLock()
-			chunk := c.chunks[index]
-			c.mu.RUnlock()
-
+		if hasData {
 			i, _ := w.Write(chunk)
 			offset += i
 			index++
