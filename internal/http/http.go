@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -26,11 +27,22 @@ func New(config *config.Server) *HttpManagerCtx {
 
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID) // Create a request ID for each request
-	router.Use(middleware.RequestLogger(&logformatter{logger}))
-	router.Use(middleware.Recoverer) // Recover from panics without crashing server
-
 	if config.Proxy {
 		router.Use(middleware.RealIP)
+	}
+	router.Use(middleware.RequestLogger(&logformatter{logger}))
+	router.Use(middleware.Recoverer) // Recover from panics without crashing server
+	if config.CORS {
+		router.Use(cors.Handler(cors.Options{
+			AllowOriginFunc: func(r *http.Request, origin string) bool {
+				return true
+			},
+			AllowedMethods:   []string{"GET", "OPTIONS"},
+			AllowedHeaders:   []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding"},
+			ExposedHeaders:   []string{"Link"},
+			AllowCredentials: true,
+			MaxAge:           300, // Maximum value not ignored by any of major browsers
+		}))
 	}
 
 	// serve static files

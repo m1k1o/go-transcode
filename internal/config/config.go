@@ -89,6 +89,7 @@ type Server struct {
 	Bind   string
 	Static string
 	Proxy  bool
+	CORS   bool
 
 	BaseDir  string            `yaml:"basedir,omitempty"`
 	Streams  map[string]string `yaml:"streams"`
@@ -126,6 +127,11 @@ func (Server) Init(cmd *cobra.Command) error {
 		return err
 	}
 
+	cmd.PersistentFlags().Bool("cors", false, "enable CORS")
+	if err := viper.BindPFlag("cors", cmd.PersistentFlags().Lookup("cors")); err != nil {
+		return err
+	}
+
 	cmd.PersistentFlags().String("basedir", "", "base directory for assets and profiles")
 	if err := viper.BindPFlag("basedir", cmd.PersistentFlags().Lookup("basedir")); err != nil {
 		return err
@@ -145,6 +151,7 @@ func (s *Server) Set() {
 	s.Bind = viper.GetString("bind")
 	s.Static = viper.GetString("static")
 	s.Proxy = viper.GetBool("proxy")
+	s.CORS = viper.GetBool("cors")
 
 	s.BaseDir = viper.GetString("basedir")
 	if s.BaseDir == "" {

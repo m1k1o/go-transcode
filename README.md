@@ -61,6 +61,9 @@ static: /var/www/html
 # X-Forwarded-For headers will be used to determine the client IP
 proxy: true
 
+# allow CORS requests (for web players)
+cors: true
+
 # For live streaming
 streams:
   cam: rtmp://localhost/live/cam
