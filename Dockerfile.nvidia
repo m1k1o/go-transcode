@@ -1,5 +1,5 @@
 ARG GO_TRANSCODE_IMAGE=go-transcode:latest
-ARG BASE_IMAGE=willprice/nvidia-ffmpeg
+ARG BASE_IMAGE=linuxserver/ffmpeg
 
 #
 # STAGE 1: build executable binary
