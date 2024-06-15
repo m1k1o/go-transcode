@@ -3,26 +3,30 @@
     <head>
         <meta charset="utf-8">
         <title>Player</title>
-        <link href="https://unpkg.com/video.js@7.10.2/dist/video-js.css" rel="stylesheet" />
+        <link href="https://unpkg.com/video.js@8.12.0/dist/video-js.css" rel="stylesheet" />
     </head>
     <body style="width:100%;height:100%;margin:0;">
-        <video-js id="my_player" class="vjs-default-skin" autoplay preload="auto" style="width:100%;height:100%;margin:0;"></video-js>
+        <video-js id="my_player" class="vjs-default-skin" autoplay preload="auto" controls style="width:100%;height:100%;margin:0;"></video-js>
 
         <!--This is for Video.js by itself -->
-        <script src="https://unpkg.com/video.js@7.10.2/dist/video.js"></script>
+        <script src="https://unpkg.com/video.js@8.12.0/dist/video.js"></script>
 
         <!--This is for HLS compatibility with all major browsers-->
-        <script src="https://unpkg.com/@videojs/http-streaming@2.4.1/dist/videojs-http-streaming.min.js"></script>
+        <script src="https://unpkg.com/@videojs/http-streaming@3.10.0/dist/videojs-http-streaming.min.js"></script>
+        <!--Multi-bitrate support for HLS-->
+        <script src="https://unpkg.com/videojs-hls-quality-selector@2.0.0/dist/videojs-hls-quality-selector.js"></script>
 
         <script>
             var player = videojs("my_player");
+            player.hlsQualitySelector();
             player.src("index.m3u8");
             player.play();
 
             document.getElementById("my_player").addEventListener("click", function(){
                 player.play();
-            });
+            }, {once: true});
 
+            // try to autoplay after 500ms
             setTimeout(function() {
                 player.play();
             }, 500)
