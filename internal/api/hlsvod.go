@@ -45,6 +45,18 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 		vodMediaPath = filepath.Clean(vodMediaPath)
 		vodMediaPath = path.Join(a.config.Vod.MediaDir, vodMediaPath)
 
+		// serve play.html
+		if hlsResource == "play.html" {
+			// check if vod media path exists
+			if _, err := os.Stat(vodMediaPath); os.IsNotExist(err) {
+				http.Error(w, "404 vod not found", http.StatusNotFound)
+				return
+			}
+
+			w.Header().Set("Content-Type", "text/html")
+			_, _ = w.Write([]byte(playHTML))
+			return
+		} else
 		// serve master profile
 		if hlsResource == "index.m3u8" {
 			data, err := hlsvod.New(hlsvod.Config{

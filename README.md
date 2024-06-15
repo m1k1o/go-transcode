@@ -26,6 +26,7 @@ Live Outputs:
 VOD Outputs:
 - [x] HLS master playlist (h264+aac) : `http://go-transcode/vod/[media-path]/index.m3u8`
 - [x] HLS custom profile (h264+aac) : `http://go-transcode/vod/[media-path]/[profile].m3u8`
+- [x] Demo HTML player (for master playlist) : `http://go-transcode/vod/[media-path]/play.html`
 
 Features:
 - [x] Seeking for static files (indexed vod files)
