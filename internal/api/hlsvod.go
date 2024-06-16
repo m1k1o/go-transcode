@@ -30,6 +30,15 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 			return
 		}
 
+		// if path does not end with .m3u8, .ts or .html, try to serve the actual file
+		if !strings.HasSuffix(urlPath, ".m3u8") &&
+			!strings.HasSuffix(urlPath, ".ts") &&
+			!strings.HasSuffix(urlPath, ".html") {
+			vodMediaPath := filepath.Join(a.config.Vod.MediaDir, filepath.Clean(urlPath))
+			http.ServeFile(w, r, vodMediaPath)
+			return
+		}
+
 		// get index of last slash from path
 		lastSlashIndex := strings.LastIndex(urlPath, "/")
 		if lastSlashIndex == -1 {
