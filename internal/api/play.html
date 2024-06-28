@@ -18,7 +18,7 @@
 
         <script>
             var player = videojs("my_player");
-            player.hlsQualitySelector();
+            player.hlsQualitySelector({displayCurrentQuality:true});
             player.src("index.m3u8");
             player.play();
 
