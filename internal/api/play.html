@@ -23,7 +23,7 @@
             player.src("index.m3u8");
 
             // Logging
-            qualities.on('addqualitylevel', () =>{
+            qualities.on('addqualitylevel', () => {
               var q = qualities[qualities.length - 1]
               console.log(`Stream loaded: ${q.height}: "${q.label}"`)
             });
@@ -31,6 +31,29 @@
               var q = qualities[qualities.selectedIndex]
               console.log(`Stream selected: ${q.height}: "${q.label}"`);
             });
+
+            // If a query arg is present, try to set the default player quality
+            const requestedQuality = parseInt(new URLSearchParams(window.location.search).get('quality'))
+            if(requestedQuality) {
+
+              var requestedQualityWasFound = false
+              qualities.on('addqualitylevel', () => {
+
+                // Don't do anything until we've loaded a stream that matches the requested quality
+                var q = qualities[qualities.length - 1]
+                if (q.height === requestedQuality) {
+                  console.log(`Requested quality found; changing stream to: "${q.label}"`)
+                  requestedQualityWasFound = true
+                }
+                if (!requestedQualityWasFound)
+                  return
+
+                // If we find the requested quality, set it
+                // Note: Intentionally continuing to call this for all qualities that are loaded after the one that was requested;
+                // doesn't work otherwise!
+                qualitySelector.setQuality(requestedQuality);
+              })
+            }
 
             // Play on manual button click
             var hasFirstPlayed = false
