@@ -20,6 +20,7 @@
             var player = videojs("my_player");
             var qualities = player.qualityLevels();
             var qualitySelector = player.hlsQualitySelector({displayCurrentQuality:true});
+            player.src("index.m3u8");
 
             // Logging
             qualities.on('addqualitylevel', () =>{
@@ -30,8 +31,6 @@
               var q = qualities[qualities.selectedIndex]
               console.log(`Stream selected: ${q.height}: "${q.label}"`);
             });
-
-            player.src("index.m3u8");
 
             // Play on manual button click
             document.getElementById("my_player").addEventListener("click", function(){
