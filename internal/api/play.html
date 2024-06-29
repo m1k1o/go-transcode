@@ -20,16 +20,23 @@
             var player = videojs("my_player");
             player.hlsQualitySelector({displayCurrentQuality:true});
             player.src("index.m3u8");
-            player.play();
 
+            // Play on manual button click
             document.getElementById("my_player").addEventListener("click", function(){
                 player.play();
             }, {once: true});
 
-            // try to autoplay after 500ms
-            setTimeout(function() {
-                player.play();
-            }, 500)
+            // Try to autoplay once the player is ready
+            // (no guarantee it will work: https://videojs.com/blog/autoplay-best-practices-with-video-js/)
+            player.on('canplay', function(){
+              var promise = player.play();
+
+              promise.then(function() {
+                // OK
+              }).catch(function(error) {
+                console.log("Couldn't autoplay, please play manually.", error)
+              });
+            })
         </script>
     </body>
 </html>
