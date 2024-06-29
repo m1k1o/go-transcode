@@ -33,20 +33,28 @@
             });
 
             // Play on manual button click
+            var hasFirstPlayed = false
             document.getElementById("my_player").addEventListener("click", function(){
-                player.play();
+              hasFirstPlayed = true
+              player.play();
             }, {once: true});
 
             // Try to autoplay once the player is ready
-            // (no guarantee it will work: https://videojs.com/blog/autoplay-best-practices-with-video-js/)
+            // No guarantee it will work: https://videojs.com/blog/autoplay-best-practices-with-video-js/
+            // Note: using canplay event instead of ready, as it fires *after* all the streams are loaded,
+            // but hasFirstPlayed check is because canplay gets fired multiple times (i.e. when switching streams
             player.on('canplay', function(){
-              var promise = player.play();
+              if(!hasFirstPlayed){
+                hasFirstPlayed = true
 
-              promise.then(function() {
-                // OK
-              }).catch(function(error) {
-                console.log("Couldn't autoplay, please play manually.", error)
-              });
+                console.log("Trying to autoplay...")
+                var promise = player.play();
+                promise.then(function() {
+                  console.log("Playback started")
+                }).catch(function(error) {
+                  console.log("Couldn't autoplay, please play manually.", error)
+                });
+              }
             })
         </script>
     </body>
