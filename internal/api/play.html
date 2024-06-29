@@ -27,7 +27,7 @@
               var q = qualities[qualities.length - 1]
               console.log(`Stream loaded: ${q.height}: "${q.label}"`)
             });
-            qualities.on('change', ()=> {
+            qualities.on('change', () => {
               var q = qualities[qualities.selectedIndex]
               console.log(`Stream selected: ${q.height}: "${q.label}"`);
             });
@@ -39,7 +39,7 @@
               var requestedQualityWasFound = false
               qualities.on('addqualitylevel', () => {
 
-                // Don't do anything until we've loaded a stream that matches the requested quality
+                // Don't do anything until actually load a stream that matches the requested quality
                 var q = qualities[qualities.length - 1]
                 if (q.height === requestedQuality) {
                   console.log(`Requested quality found; changing stream to: "${q.label}"`)
@@ -48,9 +48,8 @@
                 if (!requestedQualityWasFound)
                   return
 
-                // If we find the requested quality, set it
-                // Note: Intentionally continuing to call this for all qualities that are loaded after the one that was requested;
-                // doesn't work otherwise!
+                // Once we find the requested quality, set it. Note: Intentionally continuing to call this
+                // for all qualities that are loaded after the one that was requested - doesn't work otherwise!
                 qualitySelector.setQuality(requestedQuality);
               })
             }
@@ -64,8 +63,8 @@
 
             // Try to autoplay once the player is ready
             // No guarantee it will work: https://videojs.com/blog/autoplay-best-practices-with-video-js/
-            // Note: using canplay event instead of ready, as it fires *after* all the streams are loaded,
-            // but hasFirstPlayed check is because canplay gets fired multiple times (i.e. when switching streams
+            // Note: Using 'canplay' event instead of 'ready' as it fires *after* all the streams are loaded;
+            // hasFirstPlayed check is because canplay can fire multiple times (i.e. when manually switching streams)
             player.on('canplay', function(){
               if(!hasFirstPlayed){
                 hasFirstPlayed = true
