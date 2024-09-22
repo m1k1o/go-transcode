@@ -18,18 +18,66 @@
 
         <script>
             var player = videojs("my_player");
-            player.hlsQualitySelector();
+            var qualities = player.qualityLevels();
+            var qualitySelector = player.hlsQualitySelector({displayCurrentQuality:true});
             player.src("index.m3u8");
-            player.play();
 
+            // Logging
+            qualities.on('addqualitylevel', () => {
+              var q = qualities[qualities.length - 1]
+              console.log(`Stream loaded: ${q.height}: "${q.label}"`)
+            });
+            qualities.on('change', () => {
+              var q = qualities[qualities.selectedIndex]
+              console.log(`Stream selected: ${q.height}: "${q.label}"`);
+            });
+
+            // If a query arg is present, try to set the default player quality
+            const requestedQuality = parseInt(new URLSearchParams(window.location.search).get('quality'))
+            if(requestedQuality) {
+
+              var requestedQualityWasFound = false
+              qualities.on('addqualitylevel', () => {
+
+                // Don't do anything until actually load a stream that matches the requested quality
+                var q = qualities[qualities.length - 1]
+                if (q.height === requestedQuality) {
+                  console.log(`Requested quality found; changing stream to: "${q.label}"`)
+                  requestedQualityWasFound = true
+                }
+                if (!requestedQualityWasFound)
+                  return
+
+                // Once we find the requested quality, set it. Note: Intentionally continuing to call this
+                // for all qualities that are loaded after the one that was requested - doesn't work otherwise!
+                qualitySelector.setQuality(requestedQuality);
+              })
+            }
+
+            // Play on manual button click
+            var hasFirstPlayed = false
             document.getElementById("my_player").addEventListener("click", function(){
-                player.play();
+              hasFirstPlayed = true
+              player.play();
             }, {once: true});
 
-            // try to autoplay after 500ms
-            setTimeout(function() {
-                player.play();
-            }, 500)
+            // Try to autoplay once the player is ready
+            // No guarantee it will work: https://videojs.com/blog/autoplay-best-practices-with-video-js/
+            // Note: Using 'canplay' event instead of 'ready' as it fires *after* all the streams are loaded;
+            // hasFirstPlayed check is because canplay can fire multiple times (i.e. when manually switching streams)
+            player.on('canplay', function(){
+              if(!hasFirstPlayed){
+                hasFirstPlayed = true
+
+                console.log("Trying to autoplay...")
+                var promise = player.play();
+                promise.then(function() {
+                  console.log("Playback started")
+                }).catch(function(error) {
+                  console.log("Couldn't autoplay, please play manually.", error)
+                });
+              }
+            })
         </script>
     </body>
 </html>
