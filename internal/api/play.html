@@ -7,6 +7,7 @@
     </head>
     <body style="width:100%;height:100%;margin:0;">
         <video-js id="my_player" class="vjs-default-skin" autoplay preload="auto" controls style="width:100%;height:100%;margin:0;"></video-js>
+        <button id="toggleSrcBtn" style="position: absolute; top: 10px; left: 10px; z-index: 1000;">Toggle Source: now using Transcoded</button>
 
         <!--This is for Video.js by itself -->
         <script src="https://unpkg.com/video.js@8.12.0/dist/video.js"></script>
@@ -20,7 +21,11 @@
             var player = videojs("my_player");
             var qualities = player.qualityLevels();
             var qualitySelector = player.hlsQualitySelector({displayCurrentQuality:true});
-            player.src("index.m3u8");
+            var originalSrc = window.location.href.split('/').slice(0, -1).join('/');
+            var transcodedSrc = "index.m3u8";
+            var isOriginalSrc = false;
+
+            player.src(transcodedSrc);
 
             // Logging
             qualities.on('addqualitylevel', () => {
@@ -77,7 +82,17 @@
                   console.log("Couldn't autoplay, please play manually.", error)
                 });
               }
-            })
+            });
+
+            var toggleSrcBtn = document.getElementById("toggleSrcBtn");
+
+            // Add event listener to the button
+            toggleSrcBtn.addEventListener("click", function() {
+                isOriginalSrc = !isOriginalSrc;
+                player.src(isOriginalSrc ? originalSrc : transcodedSrc);
+                player.play();
+                this.innerHTML = isOriginalSrc ? "Toggle Source: now using Original" : "Toggle Source: now using Transcoded";
+            });
         </script>
     </body>
 </html>
