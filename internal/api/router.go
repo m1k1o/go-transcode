@@ -76,7 +76,7 @@ func (a *ApiManagerCtx) ProfilePath(folder string, profile string) (string, erro
 		return "", fmt.Errorf("invalid profile path")
 	}
 
-	profilePath := path.Join(a.config.Profiles, folder, fmt.Sprintf("%s.sh", profile))
+	profilePath := path.Join(a.config.Profiles, folder, fmt.Sprintf("%s.cmd", profile))
 	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
 		return "", err
 	}
@@ -90,6 +90,6 @@ func (a *ApiManagerCtx) transcodeStart(profilePath string, input string) (*exec.
 		return nil, fmt.Errorf("stream not found")
 	}
 
-	log.Info().Str("profilePath", profilePath).Str("url", url).Msg("command startred")
+	log.Info().Str("profilePath", profilePath).Str("url", url).Msg("command started")
 	return exec.Command(profilePath, url), nil
 }
