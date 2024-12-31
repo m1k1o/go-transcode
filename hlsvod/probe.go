@@ -129,8 +129,8 @@ func ProbeVideo(ctx context.Context, ffprobeBinary string, inputFilePath string)
 		"-v", "error", // Hide debug information
 
 		// video
-		"-skip_frame", "nokey",
-		"-show_entries", "frame=pkt_pts_time", // List all I frames
+		// we could use -skip_frame nokey, but it's extremely slow because it decodes the whole video
+		"-show_entries", "packet=pts_time,flags",
 		"-show_entries", "format=duration",
 		"-show_entries", "stream=duration,width,height",
 		"-select_streams", "v", // Video stream only, we're not interested in audio
@@ -154,9 +154,10 @@ func ProbeVideo(ctx context.Context, ffprobeBinary string, inputFilePath string)
 	}
 
 	out := struct {
-		Frames []struct {
-			PktPtsTime string `json:"pkt_pts_time"`
-		} `json:"frames"`
+		Packets []struct {
+			PtsTime string `json:"pts_time"`
+			Flags   string `json:"flags"`
+		} `json:"packets"`
 		Streams []struct {
 			Width    int    `json:"width"`
 			Height   int    `json:"height"`
@@ -191,17 +192,23 @@ func ProbeVideo(ctx context.Context, ffprobeBinary string, inputFilePath string)
 		Duration: duration,
 	}
 
-	for _, frame := range out.Frames {
-		if frame.PktPtsTime == "" {
+	for _, packet := range out.Packets {
+		// Skip packets without PtsTime.
+		if packet.PtsTime == "" || packet.PtsTime == "N/A" {
 			continue
 		}
 
-		pktPtsTime, err := strconv.ParseFloat(frame.PktPtsTime, 64)
+		// We're only interested in key frames.
+		if len(packet.Flags) > 0 && packet.Flags[0] != 'K' {
+			continue
+		}
+
+		ptsTime, err := strconv.ParseFloat(packet.PtsTime, 64)
 		if err != nil {
 			return nil, err
 		}
 
-		data.PktPtsTime = append(data.PktPtsTime, pktPtsTime)
+		data.PktPtsTime = append(data.PktPtsTime, ptsTime)
 	}
 
 	return &data, nil
