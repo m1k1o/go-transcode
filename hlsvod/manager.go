@@ -158,7 +158,7 @@ func (m *ManagerCtx) fetchMetadata(ctx context.Context) (err error) {
 	}
 
 	elapsed := time.Since(start)
-	m.logger.Info().Interface("duration", elapsed).Msg("fetched metadata")
+	m.logger.Info().Stringer("duration", elapsed).Msg("fetched metadata")
 	return
 }
 
@@ -178,7 +178,7 @@ func (m *ManagerCtx) loadMetadata(ctx context.Context) error {
 			return nil
 		}
 
-		m.logger.Err(err).Msg("cache unmarhalling returned error, replacing")
+		m.logger.Err(err).Msg("cache unmarshalling returned error, replacing")
 	} else if !errors.Is(err, os.ErrNotExist) {
 		m.logger.Err(err).Msg("cache hit returned error, replacing")
 	}
@@ -246,7 +246,7 @@ func (m *ManagerCtx) getPlaylist() string {
 	)
 
 	// join with newlines
-	return strings.Join(playlist, "\n")
+	return strings.Join(playlist, "\n") + "\n"
 }
 
 func (m *ManagerCtx) initialize() {

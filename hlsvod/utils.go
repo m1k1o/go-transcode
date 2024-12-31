@@ -87,5 +87,5 @@ func StreamsPlaylist(profiles map[string]VideoProfile, segmentNameFmt string) st
 	}
 
 	// join with newlines
-	return strings.Join(playlist, "\n")
+	return strings.Join(playlist, "\n") + "\n"
 }
