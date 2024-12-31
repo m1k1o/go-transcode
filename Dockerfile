@@ -13,7 +13,8 @@ RUN go get -v -t -d .; \
 #
 # STAGE 2: build a small image
 #
-FROM alpine:edge
+# Since 3.18, alpine uses ffmpeg 6 which handles segments differently, see: https://github.com/m1k1o/go-transcode/issues/57
+FROM alpine:3.17
 WORKDIR /app
 
 #
