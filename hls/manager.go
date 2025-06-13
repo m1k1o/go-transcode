@@ -14,6 +14,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/m1k1o/go-transcode/internal/cmdgroup"
 	"github.com/m1k1o/go-transcode/internal/utils"
 )
 
@@ -92,8 +93,8 @@ func (m *ManagerCtx) Start() error {
 	read, write := io.Pipe()
 	m.cmd.Stdout = write
 
-	// create a new process group
-	m.cmd.SysProcAttr = ConfigureAsProcessGroup()
+	// configure command to run in its own process group / job object
+	cmdgroup.Configure(m.cmd)
 
 	m.active = false
 	m.lastRequest = time.Now()
@@ -193,6 +194,19 @@ func (m *ManagerCtx) Start() error {
 	}()
 
 	return err
+}
+
+// Stop terminates the running command and its children.
+func (m *ManagerCtx) Stop() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if m.cmd != nil && m.cmd.Process != nil {
+		m.logger.Debug().Msg("performing stop")
+		if err := cmdgroup.Kill(m.cmd); err != nil {
+			m.logger.Err(err).Msg("failed to kill process group")
+		}
+	}
 }
 
 func (m *ManagerCtx) Cleanup() {
