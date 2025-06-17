@@ -14,8 +14,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
-	"github.com/m1k1o/go-transcode/internal/cmdgroup"
 	"github.com/m1k1o/go-transcode/internal/utils"
+	"github.com/m1k1o/go-transcode/internal/utils/cmdgroup"
 )
 
 // how often should be cleanup called

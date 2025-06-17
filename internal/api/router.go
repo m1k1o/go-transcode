@@ -76,7 +76,7 @@ func (a *ApiManagerCtx) ProfilePath(folder string, profile string) (string, erro
 		return "", fmt.Errorf("invalid profile path")
 	}
 
-	profilePath := path.Join(a.config.Profiles, folder, fmt.Sprintf("%s.cmd", profile))
+	profilePath := path.Join(a.config.Profiles, folder, fmt.Sprintf("%s.sh", profile))
 	if _, err := os.Stat(profilePath); os.IsNotExist(err) {
 		return "", err
 	}
