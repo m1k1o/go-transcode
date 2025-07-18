@@ -53,15 +53,28 @@ type ManagerCtx struct {
 }
 
 func New(config Config) *ManagerCtx {
+	// apply defaults if zero
+	if config.SegmentLength == 0 {
+		config.SegmentLength = 4
+	}
+	if config.SegmentOffset == 0 {
+		config.SegmentOffset = 1
+	}
+	if config.SegmentBufferMin == 0 {
+		config.SegmentBufferMin = 3
+	}
+	if config.SegmentBufferMax == 0 {
+		config.SegmentBufferMax = 5
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &ManagerCtx{
 		logger: log.With().Str("module", "hlsvod").Str("submodule", "manager").Logger(),
 		config: config,
 
-		segmentLength:    4,
-		segmentOffset:    1,
-		segmentBufferMin: 3,
-		segmentBufferMax: 5,
+		segmentLength:    config.SegmentLength,
+		segmentOffset:    config.SegmentOffset,
+		segmentBufferMin: config.SegmentBufferMin,
+		segmentBufferMax: config.SegmentBufferMax,
 
 		ctx:    ctx,
 		cancel: cancel,

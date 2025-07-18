@@ -14,6 +14,12 @@ type Config struct {
 	VideoKeyframes bool
 	AudioProfile   *AudioProfile
 
+	// HLS-VOD segment parameters (override defaults from server)
+	SegmentLength    float64
+	SegmentOffset    float64
+	SegmentBufferMin int
+	SegmentBufferMax int
+
 	Cache    bool
 	CacheDir string // If not empty, cache will folder will be used instead of media path
 

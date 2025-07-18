@@ -144,14 +144,26 @@ func (a *ApiManagerCtx) HlsVod(r chi.Router) {
 				SegmentPrefix: profileID,
 
 				VideoProfile: &hlsvod.VideoProfile{
-					Width:   profile.Width,
-					Height:  profile.Height,
-					Bitrate: profile.Bitrate,
+					Width:       profile.Width,
+					Height:      profile.Height,
+					Bitrate:     profile.Bitrate,
+					Encoder:     profile.Encoder,
+					Preset:      profile.Preset,
+					Profile:     profile.Profile,
+					Level:       profile.Level,
+					FilterGraph: profile.FilterGraph,
+					ExtraArgs:   profile.ExtraArgs,
 				},
 				VideoKeyframes: a.config.Vod.VideoKeyframes,
 				AudioProfile: &hlsvod.AudioProfile{
 					Bitrate: a.config.Vod.AudioProfile.Bitrate,
+					FilterGraph: a.config.Vod.AudioProfile.FilterGraph,
 				},
+
+				SegmentLength:    a.config.Vod.SegmentLength,
+				SegmentOffset:    a.config.Vod.SegmentOffset,
+				SegmentBufferMin: a.config.Vod.SegmentBufferMin,
+				SegmentBufferMax: a.config.Vod.SegmentBufferMax,
 
 				Cache:    a.config.Vod.Cache,
 				CacheDir: a.config.Vod.CacheDir,

@@ -106,13 +106,43 @@ vod:
       width: 1920
       height: 1080
       bitrate: 5000
+    1080p_nvidia_gpu:
+      width: 1920
+      height: 1080
+      bitrate: 5000
+      # Optional ffmpeg video overrides
+      encoder: h264_nvenc   # default "libx264"
+      preset: p1          # default "faster"
+      profile: high       # default "high"
+      level: auto         # default "4.0"
+      extra-args:         # optionally, additional ffmpeg video encoder arguments
+        - "-tune:v=ull"   # can be passed either as combined args, and will be split
+        - "-rc:v"         # or parameter ...
+        - "cbr"           # ... and value on separate lines
+      # Optional filtergraph, start each chain with the special `[vin]` pad and end them in `[vout]`
+      filtergraph:
+        - "[vin]split=2[v1][v2]"                # duplicate input
+        - "[v1]crop=iw/2:ih:0:0,hflip[left]"     # left half mirrored horizontally
+        - "[v2]crop=iw/2:ih:iw/2:0,vflip[right]" # right half flipped vertically
+        - "[left][right]hstack[vout]"            # join halves back together
+
+  # HLS-VOD segment behaviour (optional)
+  segment-length: 4        # nominal segment length in seconds
+  segment-offset: 1        # allowed +/- tolerance in seconds
+  segment-buffer-min: 3    # min segments ahead of playhead
+  segment-buffer-max: 5    # max segments transcoded at once
+
   # Use video keyframes as existing reference for chunks split
   # Using this might cause long probing times in order to get
-  # all keyframes - therefore they should be cached
+  # all keyframes - therefore they should be cached
   video-keyframes: false
   # Single audio profile used
   audio-profile:
-    bitrate: 192 # kbps
+    encoder: aac    # default "aac", but "copy" is an alternative
+    bitrate: 192  # kbps
+    # Optional filtergraph, start each chain with the special `[ain]` pad and end them in `[aout]`
+    # filtergraph:
+    # - "[ain]asetrate=48000*1.5,aresample=48000[aout]" # Pitch the audio up by ~50 % (makes everyone sound like that famous mouse!)
   # If cache is enabled
   cache: true
   # If dir is empty, cache will be stored in the same directory as media source
@@ -126,6 +156,57 @@ vod:
 hls-proxy:
   my_server: http://192.168.1.34:9981
 ```
+
+## Defining filter graphs on video and audio streams
+
+You can optionally define filtergraphs on video and audio profiles. This
+allows you to modify the streams during the transcoding process.
+
+If you don't specify any filtergraphs, you get the video scaled to the
+dimensions you specified and the first audio track from the input video.
+
+When you do supply a filtergraph:
+
+* start the chain at the source pads `[vin]` (video) or `[ain]` (audio)  
+* end the chain at `[vout]` or `[aout]` – these pads are what `-map` picks up
+
+Examples:
+
+```yaml
+vod:
+  video-profiles:
+    1080p:
+      width: 1920
+      height: 1080
+      bitrate: 5000
+      filtergraph:
+        - "[vin]format=pix_fmts=yuv420p[vout]"   # change pixel format to yuv420p
+```
+
+```yaml
+vod:
+  audio-profile:
+    filtergraph:
+      - "[ain][0:a:1]amix=inputs=2[aout]"   # mix second audio track into the first
+```
+
+### Implementation
+
+The transcoder always assembles a single FFmpeg `-filter_complex` that already contains **one video and one audio chain**:
+
+1. `[0:v]scale=…[vin]` – scales the first video stream and stores the result in pad `[vin]`.
+2. `[0:a]anull[ain]` – passes the first audio stream through unchanged into pad `[ain]`.
+3. If *no* extra filtergraph is supplied the code auto-adds `[vin]null[vout] ; [ain]anull[aout]` so the outputs exist.
+
+Both pads are then selected with:
+
+```sh
+-map [vout] -map [aout]?
+```
+
+`-map` tells FFmpeg exactly which streams (by pad name or by input index) should
+be written to the current output file. Being explicit prevents surprises when
+inputs carry multiple audio/video streams.
 
 ## Transcoding profiles for live streams
 
