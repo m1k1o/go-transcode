@@ -106,13 +106,38 @@ vod:
       width: 1920
       height: 1080
       bitrate: 5000
+    1080p_nvidia_gpu:
+      width: 1920
+      height: 1080
+      bitrate: 5000
+      # Optional ffmpeg video overrides
+      encoder: h264_nvenc   # default "libx264"
+      preset: p1          # default "faster"
+      profile: high       # default "high"
+      level: auto         # default "4.0"
+      extra-args:         # optionally, additional ffmpeg video encoder arguments
+        - "-tune:v=ull"   # can be passed either as combined args, and will be split
+        - "-rc:v"         # or parameter ...
+        - "cbr"           # ... and value on separate lines
+
+  # HLS-VOD segment behaviour (optional)
+  segment-length: 4        # nominal segment length in seconds
+  segment-offset: 1        # allowed +/- tolerance in seconds
+  segment-buffer-min: 3    # min segments ahead of playhead
+  segment-buffer-max: 5    # max segments transcoded at once
+
+  # Timeout reconfiguration (optional)
+  ready-timeout: 80       # timeout for VOD manager to get ready
+  transcode-timeout: 10   # timeout waiting for a segment to transcode
+
   # Use video keyframes as existing reference for chunks split
   # Using this might cause long probing times in order to get
-  # all keyframes - therefore they should be cached
+  # all keyframes - therefore they should be cached
   video-keyframes: false
   # Single audio profile used
   audio-profile:
-    bitrate: 192 # kbps
+    encoder: aac    # default "aac", but "copy" is an alternative
+    bitrate: 192  # kbps
   # If cache is enabled
   cache: true
   # If dir is empty, cache will be stored in the same directory as media source

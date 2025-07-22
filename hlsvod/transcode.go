@@ -26,10 +26,18 @@ type VideoProfile struct {
 	Width   int
 	Height  int
 	Bitrate int // in kilobytes
+
+	// Optional FFmpeg overrides
+	Encoder   string
+	Preset    string
+	Profile   string
+	Level     string
+	ExtraArgs []string
 }
 
 type AudioProfile struct {
-	Bitrate int // in kilobytes
+	Encoder string // audio encoder (e.g., "aac", "copy", "libopus")
+	Bitrate int    // in kilobytes (0 means use encoder default)
 }
 
 // returns a channel, that delivers name of the segments as they are encoded
@@ -89,24 +97,57 @@ func TranscodeSegments(ctx context.Context, ffmpegBinary string, config Transcod
 			scale = fmt.Sprintf("scale=%d:-2", profile.Width)
 		}
 
+		// apply defaults if empty
+		encoder := profile.Encoder
+		if encoder == "" {
+			encoder = "libx264"
+		}
+		preset := profile.Preset
+		if preset == "" {
+			preset = "faster"
+		}
+		prof := profile.Profile
+		if prof == "" {
+			prof = "high"
+		}
+		lvl := profile.Level
+		if lvl == "" {
+			lvl = "4.0"
+		}
+
 		args = append(args, []string{
 			"-vf", scale,
-			"-c:v", "libx264",
-			"-preset", "faster",
-			"-profile:v", "high",
-			"-level:v", "4.0",
+			"-c:v", encoder,
+			"-preset", preset,
+			"-profile:v", prof,
+			"-level:v", lvl,
 			"-b:v", fmt.Sprintf("%dk", profile.Bitrate),
 		}...)
+
+		// extra args
+		if len(profile.ExtraArgs) > 0 {
+			extraArgs := make([]string, 0, len(profile.ExtraArgs))
+			for _, arg := range profile.ExtraArgs {
+				// Split combined args like "-tune:v=ull" into "-tune:v", "ull"
+				if strings.Contains(arg, "=") {
+					extraArgs = append(extraArgs, strings.SplitN(arg, "=", 2)...)
+				} else {
+					extraArgs = append(extraArgs, arg)
+				}
+			}
+			args = append(args, extraArgs...)
+		}
 	}
 
 	// Audio specs
 	if config.AudioProfile != nil {
 		profile := config.AudioProfile
-
-		args = append(args, []string{
-			"-c:a", "aac",
-			"-b:a", fmt.Sprintf("%dk", profile.Bitrate),
-		}...)
+		if profile.Encoder != "" {
+			args = append(args, "-c:a", profile.Encoder)
+			if profile.Bitrate > 0 {
+				args = append(args, "-b:a", fmt.Sprintf("%dk", profile.Bitrate))
+			}
+		}
 	}
 
 	// Segmenting specs

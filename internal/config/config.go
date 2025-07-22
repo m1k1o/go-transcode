@@ -47,10 +47,18 @@ type VideoProfile struct {
 	Width   int `mapstructure:"width"`
 	Height  int `mapstructure:"height"`
 	Bitrate int `mapstructure:"bitrate"` // in kilobytes
+
+	// Optional FFmpeg overrides
+	Encoder   string   `mapstructure:"encoder"`
+	Preset    string   `mapstructure:"preset"`
+	Profile   string   `mapstructure:"profile"`
+	Level     string   `mapstructure:"level"`
+	ExtraArgs []string `mapstructure:"extra-args"`
 }
 
 type AudioProfile struct {
-	Bitrate int `mapstructure:"bitrate"` // in kilobytes
+	Encoder string `mapstructure:"encoder"`
+	Bitrate int    `mapstructure:"bitrate"` // in kilobytes
 }
 
 type VOD struct {
@@ -61,8 +69,18 @@ type VOD struct {
 	AudioProfile   AudioProfile            `mapstructure:"audio-profile"`
 	Cache          bool                    `mapstructure:"cache"`
 	CacheDir       string                  `mapstructure:"cache-dir"`
-	FFmpegBinary   string                  `mapstructure:"ffmpeg-binary"`
-	FFprobeBinary  string                  `mapstructure:"ffprobe-binary"`
+
+	// HLS-VOD segment parameters
+	SegmentLength    float64 `mapstructure:"segment-length"`
+	SegmentOffset    float64 `mapstructure:"segment-offset"`
+	SegmentBufferMin int     `mapstructure:"segment-buffer-min"`
+	SegmentBufferMax int     `mapstructure:"segment-buffer-max"`
+
+    ReadyTimeout      int `mapstructure:"ready-timeout"`
+    TranscodeTimeout  int `mapstructure:"transcode-timeout"`
+
+	FFmpegBinary  string `mapstructure:"ffmpeg-binary"`
+	FFprobeBinary string `mapstructure:"ffprobe-binary"`
 }
 
 type Enigma2 struct {
@@ -142,6 +160,40 @@ func (Server) Init(cmd *cobra.Command) error {
 		return err
 	}
 
+	// HLS-VOD segment flags
+	cmd.PersistentFlags().Float64("vod-segment-length", 4, "HLS-VOD segment length in seconds")
+	if err := viper.BindPFlag("vod.segment-length", cmd.PersistentFlags().Lookup("vod-segment-length")); err != nil {
+		return err
+	}
+
+	cmd.PersistentFlags().Float64("vod-segment-offset", 1, "HLS-VOD allowed deviation from segment length in seconds")
+	if err := viper.BindPFlag("vod.segment-offset", cmd.PersistentFlags().Lookup("vod-segment-offset")); err != nil {
+		return err
+	}
+
+	cmd.PersistentFlags().Int("vod-segment-buffer-min", 3, "HLS-VOD minimum number of future segments maintained")
+	if err := viper.BindPFlag("vod.segment-buffer-min", cmd.PersistentFlags().Lookup("vod-segment-buffer-min")); err != nil {
+		return err
+	}
+
+	cmd.PersistentFlags().Int("vod-segment-buffer-max", 5, "HLS-VOD maximum number of segments transcoded in a batch")
+    if err := viper.BindPFlag("vod.segment-buffer-max", cmd.PersistentFlags().Lookup("vod-segment-buffer-max")); err != nil {
+        return err
+    }
+
+    // VOD timeouts
+    cmd.PersistentFlags().Int("vod-ready-timeout", 80, "HLS-VOD timeout (seconds) for manager to become ready")
+    if err := viper.BindPFlag("vod.ready-timeout", cmd.PersistentFlags().Lookup("vod-ready-timeout")); err != nil {
+        return err
+    }
+    cmd.PersistentFlags().Int("vod-transcode-timeout", 10, "HLS-VOD timeout (seconds) for a segment to transcode")
+    if err := viper.BindPFlag("vod.transcode-timeout", cmd.PersistentFlags().Lookup("vod-transcode-timeout")); err != nil {
+        return err
+    }
+	if err := viper.BindPFlag("vod.segment-buffer-max", cmd.PersistentFlags().Lookup("vod-segment-buffer-max")); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -173,11 +225,55 @@ func (s *Server) Set() {
 	//
 	// VOD
 	//
-	if err := viper.UnmarshalKey("vod", &s.Vod); err != nil {
-		panic(err)
+	// Unmarshal the VOD section from the config file
+	if viper.IsSet("vod") {
+		if err := viper.UnmarshalKey("vod", &s.Vod); err != nil {
+			panic(err)
+		}
 	}
 
-	// defaults
+	// Set default values for VOD settings if they're not set in the config file
+	if s.Vod.SegmentLength == 0 {
+		s.Vod.SegmentLength = viper.GetFloat64("vod.segment-length")
+		if s.Vod.SegmentLength == 0 {
+			s.Vod.SegmentLength = 4 // default value
+		}
+	}
+
+	if s.Vod.SegmentOffset == 0 {
+		s.Vod.SegmentOffset = viper.GetFloat64("vod.segment-offset")
+		if s.Vod.SegmentOffset == 0 {
+			s.Vod.SegmentOffset = 1 // default value
+		}
+	}
+
+	if s.Vod.SegmentBufferMin == 0 {
+		s.Vod.SegmentBufferMin = viper.GetInt("vod.segment-buffer-min")
+		if s.Vod.SegmentBufferMin == 0 {
+			s.Vod.SegmentBufferMin = 3 // default value
+		}
+	}
+
+	if s.Vod.SegmentBufferMax == 0 {
+		s.Vod.SegmentBufferMax = viper.GetInt("vod.segment-buffer-max")
+		if s.Vod.SegmentBufferMax == 0 {
+			s.Vod.SegmentBufferMax = 5 // default value
+		}
+	}
+
+	if s.Vod.ReadyTimeout == 0 {
+		s.Vod.ReadyTimeout = viper.GetInt("vod.ready-timeout")
+		if s.Vod.ReadyTimeout == 0 {
+			s.Vod.ReadyTimeout = 80 // default value
+		}
+	}
+
+	if s.Vod.TranscodeTimeout == 0 {
+		s.Vod.TranscodeTimeout = viper.GetInt("vod.transcode-timeout")
+		if s.Vod.TranscodeTimeout == 0 {
+			s.Vod.TranscodeTimeout = 10 // default value
+		}
+	}
 
 	if s.Vod.TranscodeDir == "" {
 		var err error
@@ -209,6 +305,23 @@ func (s *Server) Set() {
 
 	if s.Vod.FFprobeBinary == "" {
 		s.Vod.FFprobeBinary = "ffprobe"
+	}
+
+	// apply defaults to each video profile
+	for k, vp := range s.Vod.VideoProfiles {
+		if vp.Encoder == "" {
+			vp.Encoder = "libx264"
+		}
+		if vp.Preset == "" {
+			vp.Preset = "faster"
+		}
+		if vp.Profile == "" {
+			vp.Profile = "high"
+		}
+		if vp.Level == "" {
+			vp.Level = "4.0"
+		}
+		s.Vod.VideoProfiles[k] = vp
 	}
 
 	//

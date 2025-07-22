@@ -18,12 +18,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-// how long can it take for transcode to be ready
-const readyTimeout = 80 * time.Second
-
-// how long can it take for transcode to return first data
-const transcodeTimeout = 10 * time.Second
-
 type ManagerCtx struct {
 	mu     sync.Mutex
 	logger zerolog.Logger
@@ -53,15 +47,34 @@ type ManagerCtx struct {
 }
 
 func New(config Config) *ManagerCtx {
+	// apply defaults if zero
+	if config.SegmentLength == 0 {
+		config.SegmentLength = 4
+	}
+	if config.SegmentOffset == 0 {
+		config.SegmentOffset = 1
+	}
+	if config.SegmentBufferMin == 0 {
+		config.SegmentBufferMin = 3
+	}
+	if config.SegmentBufferMax == 0 {
+		config.SegmentBufferMax = 5
+	}
+	if config.ReadyTimeout == 0 {
+		config.ReadyTimeout = 80
+	}
+	if config.TranscodeTimeout == 0 {
+		config.TranscodeTimeout = 10
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &ManagerCtx{
 		logger: log.With().Str("module", "hlsvod").Str("submodule", "manager").Logger(),
 		config: config,
 
-		segmentLength:    4,
-		segmentOffset:    1,
-		segmentBufferMin: 3,
-		segmentBufferMax: 5,
+		segmentLength:    config.SegmentLength,
+		segmentOffset:    config.SegmentOffset,
+		segmentBufferMin: config.SegmentBufferMin,
+		segmentBufferMax: config.SegmentBufferMax,
 
 		ctx:    ctx,
 		cancel: cancel,
@@ -122,7 +135,7 @@ func (m *ManagerCtx) httpEnsureReady(w http.ResponseWriter) bool {
 			m.logger.Warn().Msg("manager load failed because of shutdown")
 			http.Error(w, "500 manager not available", http.StatusInternalServerError)
 			return false
-		case <-time.After(readyTimeout):
+		case <-time.After(time.Duration(m.config.ReadyTimeout) * time.Second):
 			m.logger.Warn().Msg("manager load timeouted")
 			http.Error(w, "504 manager timeout", http.StatusGatewayTimeout)
 			return false
@@ -608,7 +621,7 @@ func (m *ManagerCtx) ServeMedia(w http.ResponseWriter, r *http.Request) {
 			m.logger.Warn().Msg("media transcode failed because of shutdown")
 			http.Error(w, "500 media not available", http.StatusInternalServerError)
 			return
-		case <-time.After(transcodeTimeout):
+		case <-time.After(time.Duration(m.config.TranscodeTimeout) * time.Second):
 			m.logger.Warn().Msg("media transcode timeouted")
 			http.Error(w, "504 media timeout", http.StatusGatewayTimeout)
 			return
